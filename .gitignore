@@ -1,0 +1,19 @@
+node_modules/
+.next/
+.env*
+!.env.example
+.vercel/
+.workflow-data/
+*.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
+.supabase/
+src/app/.well-known/workflow/
+.clerk-schema.json
+.clerk/
+/.swc
+# Local acceptance recordings and screenshots.
+tests/fixtures/*.wav
+tests/fixtures/*.jpg
+tests/fixtures/*.png

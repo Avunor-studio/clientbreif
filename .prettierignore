@@ -1,0 +1,7 @@
+node_modules
+.next
+package-lock.json
+AGENTS.md
+.env*
+supabase
+src/app/.well-known/workflow

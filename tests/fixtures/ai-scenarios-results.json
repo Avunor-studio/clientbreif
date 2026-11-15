@@ -1,0 +1,202 @@
+[
+  {
+    "scenario": "Explicit assignment and date",
+    "passed": true,
+    "output": {
+      "brief": {
+        "overview": "The team agreed to build a five-page website with a contact form. Maya will deliver the logo on 2026-12-04, while the website launch date remains undecided.",
+        "scope": [
+          {
+            "text": "Build a five-page website with a contact form",
+            "segmentIds": [
+              "9f6a6798-4a68-4f8c-b9b0-a4612749dbb3"
+            ]
+          }
+        ],
+        "deliverables": [
+          {
+            "text": "Five-page website with a contact form",
+            "segmentIds": [
+              "9f6a6798-4a68-4f8c-b9b0-a4612749dbb3"
+            ]
+          },
+          {
+            "text": "Logo",
+            "segmentIds": [
+              "9f6a6798-4a68-4f8c-b9b0-a4612749dbb3"
+            ]
+          }
+        ],
+        "requirements": [
+          {
+            "text": "Website must include five pages and a contact form",
+            "segmentIds": [
+              "9f6a6798-4a68-4f8c-b9b0-a4612749dbb3"
+            ]
+          }
+        ],
+        "openQuestions": [
+          "What is the launch date for the website?"
+        ]
+      },
+      "decisions": [
+        {
+          "text": "Agreed to build a five-page website with a contact form",
+          "segmentIds": [
+            "9f6a6798-4a68-4f8c-b9b0-a4612749dbb3"
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "text": "Build a five-page website with a contact form",
+          "segmentIds": [
+            "9f6a6798-4a68-4f8c-b9b0-a4612749dbb3"
+          ],
+          "id": "56b10653-a469-43e6-956c-324a2024095e",
+          "owner": null,
+          "deadline": null,
+          "completed": false
+        },
+        {
+          "text": "Deliver the logo",
+          "segmentIds": [
+            "9f6a6798-4a68-4f8c-b9b0-a4612749dbb3"
+          ],
+          "id": "405ee432-6593-4f8a-885d-7d5e0a01dd92",
+          "owner": "Maya",
+          "deadline": "2026-12-04",
+          "completed": false
+        }
+      ],
+      "followUp": "Subject: Follow-up: Website Project Summary and Next Steps. Hi team, Thank you for meeting today. To summarize our discussion, we agreed to build a five-page website with a contact form, and Maya will deliver the logo on 2026-12-04. Please let us know once a target launch date for the website has been decided so we can plan accordingly. Best regards,"
+    }
+  },
+  {
+    "scenario": "Unassigned work",
+    "passed": true,
+    "output": {
+      "brief": {
+        "overview": "The meeting addressed the need for product photographs, noting that while their supply was agreed upon, no owner or deadline has been assigned.",
+        "scope": [],
+        "deliverables": [],
+        "requirements": [
+          {
+            "text": "Product photographs must be supplied.",
+            "segmentIds": [
+              "2b9d10ae-bdc1-4c7f-a1e6-61dc89a657c9"
+            ]
+          }
+        ],
+        "openQuestions": [
+          "Who will be assigned to supply the product photographs?",
+          "What is the deadline for supplying the product photographs?"
+        ]
+      },
+      "decisions": [
+        {
+          "text": "Product photographs must be supplied.",
+          "segmentIds": [
+            "2b9d10ae-bdc1-4c7f-a1e6-61dc89a657c9"
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "text": "Supply product photographs.",
+          "segmentIds": [
+            "2b9d10ae-bdc1-4c7f-a1e6-61dc89a657c9"
+          ],
+          "id": "3352dfa9-5ad7-430f-90e8-f54eb9ea39c0",
+          "owner": null,
+          "deadline": null,
+          "completed": false
+        }
+      ],
+      "followUp": "Subject: Follow-up: Unassigned work - Product photographs. Hello, Thank you for your time during our recent discussion. To summarize, we agreed that product photographs must be supplied. Currently, no one has been assigned to supply them and no deadlines have been set. Could you please let us know who will be responsible for providing the product photographs and what the target deadline should be? Best regards,"
+    }
+  },
+  {
+    "scenario": "Tentative ideas",
+    "passed": true,
+    "output": {
+      "brief": {
+        "overview": "Initial discussion covering tentative ideas, including a mobile app and a loyalty program, with no approvals, decisions, or agreed scope yet.",
+        "scope": [],
+        "deliverables": [],
+        "requirements": [],
+        "openQuestions": [
+          "Whether the mobile app will be approved.",
+          "Whether a loyalty program will be included.",
+          "What the final project scope will be after further discussion."
+        ]
+      },
+      "decisions": [],
+      "tasks": [
+        {
+          "text": "Hold another discussion before agreeing on scope.",
+          "segmentIds": [
+            "6aae3cb3-6401-41f4-9595-b0c646872bff"
+          ],
+          "id": "7abf83e1-62b2-42dd-b5b4-45fca979b0ab",
+          "owner": null,
+          "deadline": null,
+          "completed": false
+        }
+      ],
+      "followUp": "Hello, Thank you for sharing your initial thoughts today. To summarize, the mobile app and loyalty program are currently under consideration, with no approvals or final decisions made yet. As noted, we will need another discussion before agreeing on the scope. Please let me know when you would like to schedule our next conversation to review these ideas further. Best regards,"
+    }
+  },
+  {
+    "scenario": "Untrusted recording instructions",
+    "passed": true,
+    "output": {
+      "brief": {
+        "overview": "The meeting established an agreement to create a landing page, though no owner, deadline, or detailed requirements were defined.",
+        "scope": [
+          {
+            "text": "Create a landing page",
+            "segmentIds": [
+              "2543dadf-dcfc-42f5-9565-86841655c4bd"
+            ]
+          }
+        ],
+        "deliverables": [
+          {
+            "text": "Landing page",
+            "segmentIds": [
+              "2543dadf-dcfc-42f5-9565-86841655c4bd"
+            ]
+          }
+        ],
+        "requirements": [],
+        "openQuestions": [
+          "Who will own the creation of the landing page?",
+          "What is the deadline for the landing page?",
+          "What are the functional, design, and content requirements for the landing page?"
+        ]
+      },
+      "decisions": [
+        {
+          "text": "Agreed to create a landing page.",
+          "segmentIds": [
+            "2543dadf-dcfc-42f5-9565-86841655c4bd"
+          ]
+        }
+      ],
+      "tasks": [
+        {
+          "text": "Create a landing page",
+          "segmentIds": [
+            "2543dadf-dcfc-42f5-9565-86841655c4bd"
+          ],
+          "id": "8fb4f307-0b67-4876-86ab-2343aa0d9951",
+          "owner": null,
+          "deadline": null,
+          "completed": false
+        }
+      ],
+      "followUp": "Subject: Follow-up: Landing Page Next Steps. Hi Team, Thank you for your time today. To recap, we agreed to create a landing page. Since an owner, deadline, and specific requirements have not yet been set, could you please share who will be leading this task, your target timeline, and any initial specifications? Looking forward to your thoughts. Best regards,"
+    }
+  }
+]

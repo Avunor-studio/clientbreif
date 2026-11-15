@@ -1,0 +1,13 @@
+.env*
+.clerk/
+.swc/
+.next/
+.workflow-data/
+node_modules/
+tests/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+FEATURE-CHECK.md
+VERIFICATION.md
