@@ -1,10 +1,12 @@
 import { z } from "zod";
+import { intakeRefSchema, validateIntakeRefs, type IntakeResponse } from "./intake-model";
 export const idSchema = z.string().uuid();
 export const evidenceSchema = z.object({
   text: z.string().min(1).max(5000),
-  segmentIds: z.array(idSchema).min(1).max(30),
-});
-export const taskSchema = evidenceSchema.extend({
+  segmentIds: z.array(idSchema).max(30),
+  intakeRefs: z.array(intakeRefSchema).max(30).optional(),
+}).refine((item) => item.segmentIds.length > 0 || (item.intakeRefs?.length || 0) > 0, "Every extracted item needs a transcript or intake source.");
+export const taskSchema = evidenceSchema.safeExtend({
   id: idSchema,
   owner: z.string().max(200).nullable(),
   deadline: z
@@ -31,6 +33,7 @@ export type Output = z.infer<typeof outputSchema>;
 const generationEvidence = z.object({
   text: z.string(),
   segmentIds: z.array(z.string()),
+  intakeRefs: z.array(z.object({ responseId: z.string(), field: z.string() })),
 });
 export const generationSchema = z.object({
   brief: z.object({
@@ -80,7 +83,7 @@ export type Version = {
   created_at: string;
   transcript_revision: number;
 };
-export function validateReferences(output: Output, segments: Segment[]) {
+export function validateReferences(output: Output, segments: Segment[], intakes: IntakeResponse[] = []) {
   const ids = new Set(segments.map((s) => s.id));
   const items = [
     ...output.brief.scope,
@@ -91,6 +94,11 @@ export function validateReferences(output: Output, segments: Segment[]) {
   ];
   if (items.some((i) => i.segmentIds.some((id) => !ids.has(id))))
     throw new Error("An output references an unknown transcript segment.");
+  if (items.some((i) => !i.segmentIds.length && !i.intakeRefs?.length))
+    throw new Error("Every extracted item needs a transcript or intake source.");
+  for (const item of items) validateIntakeRefs(item.intakeRefs || [], intakes);
+  if (output.decisions.some((item) => !item.segmentIds.length))
+    throw new Error("Meeting decisions require transcript evidence; intake requests are not agreements.");
   if (new Set(output.tasks.map((t) => t.id)).size !== output.tasks.length)
     throw new Error("Task IDs must be unique.");
   return output;

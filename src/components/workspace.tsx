@@ -1,25 +1,30 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  OrganizationSwitcher,
-  OrganizationProfile,
-  UserButton,
-  useAuth,
-} from "@clerk/nextjs";
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { OrganizationProfile, useAuth } from "@clerk/nextjs";
 import {
   AudioLines,
   ArrowUpRight,
   BriefcaseBusiness,
   Building2,
   ChevronRight,
-  CircleCheck,
   Clock3,
   FileCheck2,
   LayoutDashboard,
+  Menu,
   Plus,
+  Search,
   Settings2,
   Upload,
+  X,
 } from "lucide-react";
 import { Brand } from "./brand";
 import { Button } from "./ui/button";
@@ -27,6 +32,18 @@ import { api } from "@/lib/browser-api";
 import type { Meeting } from "@/lib/model";
 import { UploadMeeting } from "./upload-meeting";
 import { MeetingEditor } from "./meeting-editor";
+import { ProjectWorkspace } from "./project-workspace";
+import { WorkspaceResource, workspaceScopeKey } from "@/lib/workspace-resource";
+
+// Clerk's mounted account controls must not differ from their server placeholder.
+const WorkspaceAccount = dynamic(() => import("./workspace-account"), {
+  ssr: false,
+  loading: () => (
+    <span className="account-placeholder" role="status">
+      Loading workspace controls…
+    </span>
+  ),
+});
 
 export type Client = { id: string; name: string; contact_email: string };
 export type Project = {
@@ -75,33 +92,73 @@ export type Bootstrap = {
 export function Status({ value }: { value: string }) {
   return <span className={`badge ${value}`}>{value.replaceAll("_", " ")}</span>;
 }
-export function Workspace({ path }: { path: string[] }) {
-  const { orgId } = useAuth();
-  const [data, setData] = useState<Bootstrap | null>(null);
-  const [error, setError] = useState("");
-  const refresh = useCallback(async () => {
-    try {
-      const result = await api<Bootstrap>("bootstrap");
-      setData(result);
-      setError("");
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }, []);
+export function Workspace({ children }: { children: React.ReactNode }) {
+  const { isLoaded, userId, sessionId, orgId } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
+  const path = pathname.split("/").filter(Boolean).slice(1);
+  const [resource] = useState(
+    () => new WorkspaceResource(() => api<Bootstrap>("bootstrap")),
+  );
+  const snapshot = useSyncExternalStore(
+    resource.subscribe,
+    resource.getSnapshot,
+    resource.getServerSnapshot,
+  );
+  const scopeKey = workspaceScopeKey(
+    userId && sessionId && orgId ? { userId, sessionId, orgId } : null,
+  );
+  // Hide an old scope synchronously, before the scope-reset effect runs.
+  const data = snapshot.scopeKey === scopeKey ? snapshot.data : null;
+  const error = snapshot.scopeKey === scopeKey ? snapshot.error : "";
+  const revalidate = resource.refresh;
+  const refresh = useCallback(
+    () => resource.refresh({ force: true }),
+    [resource],
+  );
+  const navigationDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    setData(null);
-    void refresh();
-  }, [orgId, refresh]);
+    if (!isLoaded) return;
+    resource.setScope(
+      userId && sessionId && orgId ? { userId, sessionId, orgId } : null,
+    );
+    if (!userId) {
+      router.replace("/sign-in");
+      return;
+    }
+    if (!orgId) {
+      router.replace("/onboarding");
+      return;
+    }
+    void revalidate();
+  }, [isLoaded, userId, sessionId, orgId, resource, revalidate, router]);
+  useEffect(() => {
+    void revalidate();
+  }, [pathname, revalidate]);
+  useEffect(() => {
+    const update = () => {
+      if (document.visibilityState === "visible") void revalidate();
+    };
+    window.addEventListener("focus", update);
+    document.addEventListener("visibilitychange", update);
+    return () => {
+      window.removeEventListener("focus", update);
+      document.removeEventListener("visibilitychange", update);
+    };
+  }, [revalidate]);
   useEffect(() => {
     if (
       !data?.runs.some((r) => r.status === "active") &&
       !data?.cleanup.some((m) => m.cleanup_status === "pending")
     )
       return;
-    const timer = setInterval(() => void refresh(), 5000);
+    const timer = setInterval(() => void revalidate(), 5000);
     return () => clearInterval(timer);
-  }, [data, refresh]);
+  }, [data, revalidate]);
   const section = path[0] || "dashboard";
+  useEffect(() => {
+    navigationDialog.current?.close();
+  }, [section, path[1]]);
   const nav = [
     ["dashboard", "Overview", LayoutDashboard],
     ["projects", "Clients & projects", BriefcaseBusiness],
@@ -109,59 +166,68 @@ export function Workspace({ path }: { path: string[] }) {
     ["approvals", "Client approvals", FileCheck2],
     ["settings", "Settings", Settings2],
   ] as const;
+  const navigation = nav.map(([key, label, Icon]) => (
+    <Link
+      key={key}
+      href={key === "dashboard" ? "/app" : `/app/${key}`}
+      className={section === key ? "active" : ""}
+      aria-current={section === key ? "page" : undefined}
+      prefetch
+      onClick={(event) => {
+        if (!event.defaultPrevented) navigationDialog.current?.close();
+      }}
+    >
+      <Icon size={18} aria-hidden="true" />
+      {label}
+    </Link>
+  ));
   return (
     <div className="shell">
+      <a className="skip-link" href="#workspace-content">
+        Skip to workspace
+      </a>
       <aside className="sidebar">
         <Link href="/app">
           <Brand />
         </Link>
         <div>
           <div className="workspace-label">WORKSPACE</div>
-          <nav aria-label="Workspace navigation">
-            {nav.map(([key, label, Icon]) => (
-              <Link
-                key={key}
-                href={key === "dashboard" ? "/app" : `/app/${key}`}
-                className={section === key ? "active" : ""}
-              >
-                <Icon size={18} />
-                {label}
-              </Link>
-            ))}
-          </nav>
+          <nav aria-label="Workspace navigation">{navigation}</nav>
         </div>
         <div className="sidebar-bottom">
-          <div className="card" style={{ padding: 14, background: "#f8faff" }}>
-            <div className="row">
-              <CircleCheck size={16} color="#315de8" />
-              <strong className="small">Make every call count</strong>
-            </div>
-            <p className="small muted" style={{ marginTop: 7 }}>
-              A clear brief is the start of a better project.
-            </p>
-          </div>
+          <Link className="sidebar-help" href="/how-it-works">
+            <span>THE CLIENTBRIEF FIELD GUIDE</span>
+            <strong>
+              From recording to review <ArrowUpRight size={15} />
+            </strong>
+          </Link>
         </div>
       </aside>
       <div className="content">
         <header className="topbar">
-          <span className="muted small">
+          <button
+            type="button"
+            className="mobile-nav-toggle btn btn-ghost"
+            aria-label="Open workspace navigation"
+            aria-haspopup="dialog"
+            aria-controls="workspace-navigation"
+            onClick={() => navigationDialog.current?.showModal()}
+          >
+            <Menu size={21} />
+          </button>
+          <span className="breadcrumb muted small">
             Workspace{" "}
             <ChevronRight
               size={12}
               style={{ display: "inline", verticalAlign: "middle" }}
             />{" "}
-            {nav.find((n) => n[0] === section)?.[1] || "Meeting"}
+            {nav.find((n) => n[0] === section)?.[1] ||
+              (section === "new" ? "Upload meeting" : "Meeting workspace")}
           </span>
-          <div className="row">
-            <OrganizationSwitcher
-              hidePersonal
-              afterSelectOrganizationUrl="/app"
-              afterCreateOrganizationUrl="/app"
-            />
-            <UserButton />
-          </div>
+          <WorkspaceAccount />
         </header>
-        <main className="main">
+        <main className="main" id="workspace-content">
+          {children}
           {error && (
             <div className="notice error row between" role="alert">
               {error}
@@ -171,9 +237,13 @@ export function Workspace({ path }: { path: string[] }) {
             </div>
           )}
           {!data && !error ? (
-            <p className="muted loading" role="status">
-              Loading your agency…
-            </p>
+            <div role="status" aria-label="Loading workspace">
+              <div className="workspace-skeleton loading" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
           ) : data && data.orgId === orgId ? (
             <>
               {data.missing.length > 0 && (
@@ -184,6 +254,8 @@ export function Workspace({ path }: { path: string[] }) {
               )}
               {section === "dashboard" ? (
                 <Dashboard data={data} />
+              ) : section === "projects" && path[1] ? (
+                <ProjectWorkspace key={path[1]} id={path[1]} />
               ) : section === "projects" ? (
                 <Projects data={data} refresh={refresh} />
               ) : section === "new" ? (
@@ -209,6 +281,36 @@ export function Workspace({ path }: { path: string[] }) {
           ) : null}
         </main>
       </div>
+      <dialog
+        className="workspace-drawer"
+        id="workspace-navigation"
+        aria-labelledby="workspace-navigation-title"
+        ref={navigationDialog}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) event.currentTarget.close();
+        }}
+      >
+        <div className="drawer-body">
+          <div className="row between">
+            <span id="workspace-navigation-title">
+              <Brand />
+            </span>
+            <button
+              className="btn btn-ghost"
+              type="button"
+              aria-label="Close navigation"
+              onClick={() => navigationDialog.current?.close()}
+            >
+              <X size={21} />
+            </button>
+          </div>
+          <span className="workspace-label">WORKSPACE</span>
+          <nav aria-label="Mobile workspace navigation">{navigation}</nav>
+          <Link className="sidebar-help" href="/how-it-works">
+            How ClientBrief works <ArrowUpRight size={15} />
+          </Link>
+        </div>
+      </dialog>
     </div>
   );
 }
@@ -247,8 +349,8 @@ function Dashboard({ data }: { data: Bootstrap }) {
   return (
     <>
       <PageTitle
-        title="A little clarity, after every call."
-        subtitle="Keep your client conversations moving toward clear outcomes."
+        title="Your agency, at a glance."
+        subtitle="The conversations, briefs, and client decisions moving your work forward."
       />
       <div className="stats">
         {[
@@ -277,92 +379,169 @@ function Dashboard({ data }: { data: Bootstrap }) {
         </Link>
       </div>
       <Meetings data={data} limit={6} />
-      <div className="grid-two" style={{ marginTop: 22 }}>
-        <div className="card">
-          <span className="eyebrow">Your workflow</span>
-          <h2 style={{ marginTop: 7 }}>From call to client alignment</h2>
-          <p className="muted small" style={{ marginTop: 9 }}>
-            Upload → correct transcript → draft outputs → review → client
-            approval
+      <div className="dashboard-next">
+        <Link href="/app/projects">
+          <span className="eyebrow">ORGANIZE THE WORK</span>
+          <h3>
+            Clients & projects <ArrowUpRight size={17} />
+          </h3>
+          <p>Give each conversation a place in the project.</p>
+        </Link>
+        <Link href="/app/approvals">
+          <span className="eyebrow">CLOSE THE LOOP</span>
+          <h3>
+            Client reviews <ArrowUpRight size={17} />
+          </h3>
+          <p>
+            {pending
+              ? `${pending} shared brief${pending === 1 ? " is" : "s are"} waiting for a response.`
+              : "Keep track of shared briefs and client responses."}
           </p>
-        </div>
-        <div className="card">
-          <span className="eyebrow">Private by default</span>
-          <h2 style={{ marginTop: 7 }}>Share the brief. Keep the context.</h2>
-          <p className="muted small" style={{ marginTop: 9 }}>
-            Clients see only the brief version you share. Your recording and
-            internal notes stay in your agency.
-          </p>
-        </div>
+        </Link>
       </div>
     </>
   );
 }
 function Meetings({ data, limit }: { data: Bootstrap; limit?: number }) {
-  const rows = limit ? data.meetings.slice(0, limit) : data.meetings;
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("");
+  const filtered = data.meetings.filter((meeting) => {
+    const project = data.projects.find(
+      (project) => project.id === meeting.project_id,
+    );
+    return (
+      (!status || meeting.status === status) &&
+      `${meeting.title} ${project?.name || ""}`
+        .toLowerCase()
+        .includes(query.trim().toLowerCase())
+    );
+  });
+  const rows = limit ? data.meetings.slice(0, limit) : filtered;
+  const filtering = !limit && Boolean(query || status);
   return (
-    <div className="card table-card">
-      {!rows.length ? (
-        <div className="empty">
-          <AudioLines size={32} />
-          <h2>Your next meeting starts here</h2>
-          <p className="muted">
-            Create a client project, then upload a recording to turn the
-            conversation into a clear handoff.
-          </p>
-          <Button asChild variant="outline">
-            <Link href={data.projects.length ? "/app/new" : "/app/projects"}>
-              {data.projects.length
-                ? "Upload a meeting"
-                : "Create your first project"}{" "}
-              <ArrowUpRight size={14} />
-            </Link>
-          </Button>
+    <>
+      {!limit && (
+        <div className="meeting-filter">
+          <label className="search-field">
+            <span className="sr-only">Search meetings or projects</span>
+            <Search size={16} aria-hidden="true" />
+            <input
+              className="input"
+              type="search"
+              placeholder="Search meetings or projects…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+          <label>
+            <span className="sr-only">Processing status</span>
+            <select
+              aria-label="Processing status"
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+            >
+              <option value="">All processing statuses</option>
+              {[
+                "uploading",
+                "transcribing",
+                "transcript_ready",
+                "generating",
+                "ready",
+                "failed",
+              ].map((value) => (
+                <option key={value} value={value}>
+                  {value.replaceAll("_", " ")}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="small muted" role="status">
+            {rows.length} meeting{rows.length === 1 ? "" : "s"}
+          </span>
         </div>
-      ) : (
-        <table className="meeting-table">
-          <thead>
-            <tr>
-              <th>Meeting</th>
-              <th>Project</th>
-              <th>Status</th>
-              <th>Added</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((m) => (
-              <tr key={m.id} className="meeting-row">
-                <td>
-                  <Link
-                    className="meeting-title"
-                    href={`/app/meetings/${m.id}`}
-                  >
-                    {m.title}
-                  </Link>
-                  <div className="small muted">
-                    {m.duration_seconds
-                      ? `${Math.ceil(m.duration_seconds / 60)} min recording`
-                      : "Recording upload"}
-                  </div>
-                </td>
-                <td className="muted small">
-                  {data.projects.find((p) => p.id === m.project_id)?.name}
-                </td>
-                <td>
-                  <Status value={m.status} />
-                </td>
-                <td className="muted small">
-                  {new Date(m.created_at).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       )}
-    </div>
+      <div className="card table-card">
+        {!rows.length ? (
+          <div className="empty">
+            <AudioLines size={32} />
+            <h2>
+              {filtering
+                ? "No matching meetings"
+                : "Your next meeting starts here"}
+            </h2>
+            <p className="muted">
+              {filtering
+                ? "Try another title, project, or processing status."
+                : "Create a client project, then upload a recording to turn the conversation into a clear handoff."}
+            </p>
+            {filtering ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setQuery("");
+                  setStatus("");
+                }}
+              >
+                Clear filters
+              </Button>
+            ) : (
+              <Button asChild variant="outline">
+                <Link
+                  href={data.projects.length ? "/app/new" : "/app/projects"}
+                >
+                  {data.projects.length
+                    ? "Upload a meeting"
+                    : "Create your first project"}{" "}
+                  <ArrowUpRight size={14} />
+                </Link>
+              </Button>
+            )}
+          </div>
+        ) : (
+          <table className="meeting-table">
+            <thead>
+              <tr>
+                <th>Meeting</th>
+                <th>Project</th>
+                <th>Status</th>
+                <th>Added</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((m) => (
+                <tr key={m.id} className="meeting-row">
+                  <td>
+                    <Link
+                      className="meeting-title"
+                      href={`/app/meetings/${m.id}`}
+                    >
+                      {m.title}
+                    </Link>
+                    <div className="small muted">
+                      {m.duration_seconds
+                        ? `${Math.ceil(m.duration_seconds / 60)} min recording`
+                        : "Recording upload"}
+                    </div>
+                  </td>
+                  <td className="muted small">
+                    {data.projects.find((p) => p.id === m.project_id)?.name}
+                  </td>
+                  <td>
+                    <Status value={m.status} />
+                  </td>
+                  <td className="muted small">
+                    {new Date(m.created_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
   );
 }
 function Projects({
@@ -406,7 +585,9 @@ function Projects({
     <div className="stack">
       <div className="page-title">
         <h1>Clients & projects</h1>
-        <p className="muted">Give every conversation a home.</p>
+        <p className="muted">
+          Organize client projects, meetings, and saved briefs.
+        </p>
       </div>
       {error && (
         <div className="notice error" role="alert">
@@ -531,7 +712,7 @@ function Projects({
           <div className="list-item" key={c.id}>
             <div className="row between">
               <div className="row">
-                <Building2 size={18} color="#6c83ad" />
+                <Building2 size={18} color="var(--muted-foreground)" />
                 <strong>{c.name}</strong>
                 <span className="small muted">{c.contact_email}</span>
               </div>
@@ -552,7 +733,8 @@ function Projects({
                   style={{ margin: "10px 0 0 30px" }}
                 >
                   <div>
-                    <h3>{p.name}</h3>
+                    <h3><Link className="text-link" href={`/app/projects/${p.id}`}>{p.name} ↗</Link></h3>
+                    <Link className="small text-link" href={`/app/projects/${p.id}`}>Client intake & scope changes</Link>
                     <p className="small muted">
                       {p.description || "No description"} ·{" "}
                       {
@@ -597,7 +779,7 @@ function Projects({
                         )
                         .map((v) => (
                           <Link
-                            style={{ marginRight: 12, color: "#315de8" }}
+                            style={{ marginRight: 12, color: "var(--primary)" }}
                             key={v.id}
                             href={`/app/meetings/${v.meeting_id}?version=${v.id}`}
                           >

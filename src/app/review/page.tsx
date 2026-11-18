@@ -16,6 +16,7 @@ export default function ReviewPage() {
   const [data, setData] = useState<Review | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [decision, setDecision] = useState("approved");
   useEffect(() => {
     const t =
       new URLSearchParams(window.location.hash.slice(1)).get("token") || "";
@@ -51,9 +52,42 @@ export default function ReviewPage() {
   }
   return (
     <main className="review-page">
-      <Brand />
-      {error && (
-        <p className="notice error" role="alert" style={{ marginTop: 24 }}>
+      <header className="review-header">
+        <Brand />
+        <span>CLIENT REVIEW</span>
+      </header>
+      {error && !data && (
+        <section className="card stack review-error" role="alert">
+          <span className="eyebrow">CLIENT REVIEW</span>
+          <h1>This brief isn’t available.</h1>
+          <p>{error}</p>
+          <p className="muted small">
+            The agency can send a fresh link if this one has expired or been
+            revoked.
+          </p>
+          {token && !data && (
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                try {
+                  setData(await api<Review>("review/read", "POST", { token }));
+                } catch (error) {
+                  setError((error as Error).message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Try opening again
+            </Button>
+          )}
+        </section>
+      )}
+      {error && data && (
+        <p className="notice error" role="alert">
           {error}
         </p>
       )}
@@ -64,15 +98,15 @@ export default function ReviewPage() {
       )}
       {data && (
         <>
-          <div style={{ marginTop: 35 }}>
-            <span className="eyebrow">Client review</span>
-            <h1 style={{ margin: "8px 0" }}>{data.title}</h1>
+          <div className="review-title">
+            <span className="eyebrow">A SHARED PROJECT BRIEF</span>
+            <h1>{data.title}</h1>
             <p className="muted small">
               Brief saved {new Date(data.versionDate).toLocaleString()} · Link
               expires {new Date(data.expiresAt).toLocaleDateString()}
             </p>
           </div>
-          <article className="card stack">
+          <article className="card stack review-document">
             <h2>Project brief</h2>
             <p style={{ whiteSpace: "pre-wrap" }}>{data.brief.overview}</p>
             {(["scope", "deliverables", "requirements"] as const).map((k) => (
@@ -102,7 +136,7 @@ export default function ReviewPage() {
               )}
             </section>
           </article>
-          <section className="card stack">
+          <section className="card stack review-response">
             {data.response ? (
               <>
                 <h2>
@@ -134,6 +168,7 @@ export default function ReviewPage() {
                       <input
                         className="input"
                         name="name"
+                        autoComplete="name"
                         required
                         maxLength={150}
                       />
@@ -144,6 +179,7 @@ export default function ReviewPage() {
                         className="input"
                         type="email"
                         name="email"
+                        autoComplete="email"
                         required
                         maxLength={254}
                       />
@@ -151,7 +187,12 @@ export default function ReviewPage() {
                   </div>
                   <label className="label">
                     Your response
-                    <select name="decision" required>
+                    <select
+                      name="decision"
+                      required
+                      value={decision}
+                      onChange={(event) => setDecision(event.target.value)}
+                    >
                       <option value="approved">Approve this brief</option>
                       <option value="changes_requested">Request changes</option>
                     </select>
@@ -161,6 +202,7 @@ export default function ReviewPage() {
                     <textarea
                       className="textarea"
                       name="comments"
+                      required={decision === "changes_requested"}
                       maxLength={5000}
                       placeholder="Describe any changes needed. Required when requesting changes."
                     />
@@ -174,6 +216,10 @@ export default function ReviewPage() {
           </section>
         </>
       )}
+      <footer className="review-footer">
+        Only this saved brief is shared with you. Your response belongs to this
+        version.
+      </footer>
     </main>
   );
 }

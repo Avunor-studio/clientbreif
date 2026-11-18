@@ -6,6 +6,8 @@ import { HookConflictError } from "workflow/errors";
 import { context, checked, scopedMeeting, HttpError } from "@/lib/server";
 import { adminDb } from "@/lib/admin-db";
 import { missingConfig, env, generationApiKeyName } from "@/lib/config";
+import { publicIntake, projectFeature } from "@/lib/project-api";
+import type { IntakeResponse } from "@/lib/intake-model";
 import {
   idSchema,
   outputSchema,
@@ -129,6 +131,8 @@ async function handle(
         });
       }
     }
+    if (path[0] === "intake" && method === "POST" && path.length === 2)
+      return ok(await publicIntake(req, path[1]));
     const missing = missingConfig(false);
     if (missing.length)
       throw new HttpError(
@@ -170,8 +174,9 @@ async function handle(
           .from("meetings")
           .select("id,title,cleanup_status,cleanup_error,deleted_at")
           .in("cleanup_status", ["pending", "failed"]),
+        db.from("project_runs").select("id,project_id,kind,status,created_at,finished_at,error"),
       ]);
-      const [clients, projects, meetings, links, versions, runs, cleanup] =
+      const [clients, projects, meetings, links, versions, runs, cleanup, projectRuns] =
         results.map(checked);
       return ok({
         clients,
@@ -179,13 +184,15 @@ async function handle(
         meetings,
         links,
         versions,
-        runs,
+        runs: [...runs, ...projectRuns],
         cleanup,
         isAdmin: ctx.isAdmin,
         missing: missingConfig(),
         orgId: organization_id,
       });
     }
+    if (path[0] === "projects" && (path.length >= 3 || (path.length === 2 && method === "GET")))
+      return ok(await projectFeature(req, path, ctx));
     if (path[0] === "clients" || path[0] === "projects") {
       const resource = path[0];
       if (method === "POST" || method === "PATCH") {
@@ -254,7 +261,7 @@ async function handle(
       const id = idSchema.parse(path[1]);
       const m = await scopedMeeting(ctx, id, path[2] === "cleanup");
       if (method === "GET" && path.length === 2) {
-        const [segments, versions, links] = await Promise.all([
+        const [segments, versions, links, intakes] = await Promise.all([
           db
             .from("transcript_segments")
             .select("*")
@@ -271,6 +278,7 @@ async function handle(
               "id,version_id,expires_at,revoked_at,review_responses(name,decision,comments,created_at)",
             )
             .order("created_at", { ascending: false }),
+          db.from("intake_responses").select("*").eq("project_id", m.project_id).order("created_at", { ascending: false }),
         ]);
         let recordingUrl = null;
         if (
@@ -292,6 +300,7 @@ async function handle(
           ),
           recordingUrl,
           isAdmin: ctx.isAdmin,
+          intakes: checked(intakes),
         });
       }
       if (
@@ -299,6 +308,9 @@ async function handle(
         (path[2] === "process" || path[2] === "generate")
       ) {
         const kind = path[2] === "generate" ? "generate" : "transcribe";
+        const generationInput = kind === "generate"
+          ? z.object({ intakeId: idSchema.nullable().optional() }).parse(await req.json())
+          : null;
         env(
           kind === "generate" ? generationApiKeyName() : "ASSEMBLYAI_API_KEY",
         );
@@ -319,10 +331,10 @@ async function handle(
             );
         }
         const run = checked(
-          await adminDb().rpc("claim_run", {
+          await adminDb().rpc(kind === "generate" ? "claim_generation" : "claim_run", {
             p_org: organization_id,
             p_meeting: id,
-            p_kind: kind,
+            ...(kind === "generate" ? { p_intake: generationInput?.intakeId || null } : { p_kind: kind }),
           }),
         );
         if (run.kind !== kind)
@@ -396,7 +408,8 @@ async function handle(
         const segments = checked(
           await db.from("transcript_segments").select("*").eq("meeting_id", id),
         ) as Segment[];
-        validateReferences(input.content, segments);
+        const intakes = checked(await db.from("intake_responses").select("*").eq("project_id", m.project_id)) as IntakeResponse[];
+        validateReferences(input.content, segments, intakes);
         const versionId = checked(
           await adminDb().rpc("save_output", {
             p_meeting: id,
@@ -501,7 +514,7 @@ async function handle(
             mime = "text/markdown";
           } else if (format === "tasks") {
             text = [
-              ["Task", "Owner", "Deadline", "Completed", "Source segment IDs"]
+              ["Task", "Owner", "Deadline", "Completed", "Source segment IDs", "Intake sources"]
                 .map(csvCell)
                 .join(","),
               ...v.content.tasks.map(
@@ -511,6 +524,7 @@ async function handle(
                   deadline: string | null;
                   completed: boolean;
                   segmentIds: string[];
+                  intakeRefs?: { responseId: string; field: string }[];
                 }) =>
                   [
                     t.text,
@@ -518,6 +532,7 @@ async function handle(
                     t.deadline,
                     t.completed,
                     t.segmentIds.join(" "),
+                    (t.intakeRefs || []).map((r) => `${r.responseId}:${r.field}`).join(" "),
                   ]
                     .map(csvCell)
                     .join(","),
@@ -553,7 +568,8 @@ async function handle(
         ? error.status
         : message.startsWith("Setup required")
           ? 503
-          : /changed|already processing|not ready|cancelled|unavailable|Wait for/.test(
+          : /expired|revoked/.test(message) ? 410
+          : /changed|already processing|not ready|cancelled|unavailable|Wait for|Choose an approved/.test(
                 message,
               )
             ? 409

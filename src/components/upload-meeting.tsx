@@ -132,8 +132,10 @@ export function UploadMeeting({ data }: { data: Bootstrap }) {
         <ArrowLeft size={15} /> Back to overview
       </Link>
       <div className="page-title">
-        <h1>Bring the conversation.</h1>
-        <p className="muted">We’ll help you turn it into a clear next step.</p>
+        <h1>Upload a meeting</h1>
+        <p className="muted">
+          Choose a client project and bring its audio or video recording.
+        </p>
       </div>
       <form className="card stack" onSubmit={(e) => void submit(e)}>
         <div className="form-grid">

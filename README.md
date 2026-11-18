@@ -1,5 +1,17 @@
 # ClientBrief
 
+The interface uses a paper, ink, and burgundy design with Instrument Serif headlines and Manrope controls. Public pages are `/`, `/how-it-works`, and `/for-agencies`; they explain the existing recording-to-brief workflow using clearly labelled illustrative content.
+
+## Public website and search indexing
+
+Local and preview deployments are unindexable by default. The website includes page-specific descriptions, social previews, structured data, icons, and an opt-in sitemap.
+
+For a public production launch, set `SITE_URL` to the stable HTTPS origin (for example, your own production domain, without a path), then set `SITE_INDEXABLE=true` and rebuild. Keep `SITE_INDEXABLE=false` for protected pilot deployments. Vercel preview and development environments remain unindexable even when the flag is enabled. `SITE_URL` only controls marketing metadata; keep `APP_URL` configured separately for application links and request-origin authorization.
+
+Only the three public pages enter the sitemap. Workspace, authentication, onboarding, API, and client review routes carry `noindex` protection and never enter it. Review tokens and private project content are excluded from public metadata. A production build with indexing enabled rejects a missing or unsuitable `SITE_URL`. Fonts are self-hosted by Next.js; the build needs access to Google Fonts to retrieve them.
+
+UI screenshots and verification notes for the redesign are documented in `UI-REDESIGN.md`. Application provider configuration and the rest of the setup follow below.
+
 A working agency meeting application built with Next.js, Clerk Organizations, Supabase, AssemblyAI, Vercel Workflow, and the Vercel AI SDK. Users review transcripts before generating project briefs, decisions, action items, and follow-up drafts. Clients approve immutable brief versions through expiring links.
 
 ## Start locally
@@ -23,7 +35,7 @@ The landing page and Clerk sign-in work before all AI services are configured. T
 ## Current setup and remaining steps
 
 - A Clerk development application was initialized using the B2B template. Organizations and required selection are enabled. Development keys are in the ignored `.env.local`; they are not committed.
-- The Supabase project **ClientBrief** (`wyboymyzzoarwyuatrhk`) was created in Mumbai in the selected organization. All three migrations are already applied. Public URL and publishable key are configured locally.
+- The Supabase project **ClientBrief** (`wyboymyzzoarwyuatrhk`) was created in Mumbai in the selected organization. All five migrations are already applied. Public URL and publishable key are configured locally.
 - Local credentials are configured and their read-only service probes passed. Keep `.env.local` out of chat and source control.
 - Clerk-to-Supabase authentication now works: the signed-in workspace can create clients/projects, upload a private recording, and save transcript corrections.
 - A synthetic spoken recording was uploaded and transcribed through AssemblyAI on 15 November 2026. After AI Gateway's payment-card block, direct Google AI Studio generation was configured and verified against that saved transcript. A validated draft is saved on the synthetic test meeting; transcription was reused. Keep Google keys in `GOOGLE_GENERATIVE_AI_API_KEY`, not `AI_GATEWAY_API_KEY`.
@@ -49,7 +61,7 @@ Invitation emails also use Clerk's hosted Account Portal configuration; local en
 
 Get a server secret key from the ClientBrief project's API Keys settings and assign it to `SUPABASE_SECRET_KEY`. A legacy `service_role` key also works. Never prefix this variable with `NEXT_PUBLIC_`. The connected CLI account could not retrieve it automatically.
 
-The migrations create nine tenant-scoped tables, invoker RPCs available only to the service role, and a private `recordings` bucket. User requests use Clerk JWTs and RLS; background jobs and token-authorized public review operations use the server key after explicit authorization checks.
+The migrations create thirteen tenant-scoped tables, invoker RPCs available only to the service role, and a private `recordings` bucket. User requests use Clerk JWTs and RLS; background jobs and token-authorized public review operations use the server key after explicit authorization checks.
 
 The bucket is configured for 250 MB recordings. Confirm the project's global Storage upload limit also permits 250 MB. If the selected free plan caps uploads below this size, use smaller files or change the product limit in `src/lib/model.ts` to the allowed size; do not silently upgrade the account. Uploads use 6 MB TUS chunks directly to storage. Video inputs use spoken audio only.
 
@@ -102,7 +114,7 @@ $env:DATABASE_URL = '<direct or session-pooler connection string>'
 npm run test:db
 ```
 
-`tests/database.sql` can also run in the SQL editor. It verifies tenant isolation, cross-tenant mutation denial, privileged RPC permissions, processing limits and deduplication, immutable approvals, expiration/revocation, and deletion guards. Tests that set JWT claims directly test database policy behavior, not Clerk's JWT signature verification.
+`tests/database.sql` and `tests/project-database.sql` can also run in the SQL editor. It verifies tenant isolation, cross-tenant mutation denial, privileged RPC permissions, processing limits and deduplication, immutable approvals, expiration/revocation, and deletion guards. Tests that set JWT claims directly test database policy behavior, not Clerk's JWT signature verification.
 
 Implementation checks completed:
 
@@ -121,4 +133,19 @@ Implementation checks completed:
 6. Apply migrations before releasing against a new database. Run the full real-recording acceptance flow on a preview before allowing pilot client recordings.
 7. If using `vercel env pull`, back up local configuration securely first: that command replaces its destination file. Do not commit a credential backup.
 
-Local review links point to localhost and work only on the same computer. Remote client review needs a deployed origin. This release does not include billing, automated email sending, live bots, scope change detection, multilingual support, or task-tool integrations.
+Local review links point to localhost and work only on the same computer. Remote client review needs a deployed origin. This release does not include billing, automated email sending, live bots, multilingual support, or task-tool integrations.
+
+## Client intake and scope tracking
+
+Open Clients & projects, then select a project. Client intake supports seven-day, revocable, single-submission links. Admins create links; members can read answers and draft discovery agendas. Collect goals, audience, deliverables, budget, timeline, reference links, and decision maker. Reference assets are links only; file uploads are not included. Contact details are self-reported. Answers remain immutable; corrections require a new form.
+
+In a meeting, choose an intake submission before generating a new draft. Intake citations show the answer separately from recording timestamps. Requests are not meeting agreements. Saved versions and approvals remain independent.
+
+Scope changes compare a saved meeting transcript with an approved brief from a different meeting in the same project. AI proposes cited additions, changes, or clarification points. Agency reviewers explicitly save a status and optional budget/timeline estimates. Copy a change-request draft containing only confirmed suggestions. Client approval of that draft is still manual; the existing approval flow approves brief versions, not scope-change drafts. Transcript edits require a fresh comparison. The two-job organization limit covers both meeting and project AI work.
+
+Opt-in synthetic live test (uses configured Google and Supabase services):
+
+```powershell
+$env:CLIENTBRIEF_LIVE_PROJECTS = "1"
+npx vitest run tests/live-project-features.test.ts
+```

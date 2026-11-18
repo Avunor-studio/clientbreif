@@ -9,7 +9,7 @@ export default function Onboarding() {
       />
     );
   return (
-    <main className="auth-page">
+    <main className="onboarding-page">
       <Brand />
       <h1>Your agency, together.</h1>
       <p className="muted">

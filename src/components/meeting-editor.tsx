@@ -17,6 +17,7 @@ import { Status, type ReviewLink } from "./workspace";
 import { api } from "@/lib/browser-api";
 import { time } from "@/lib/utils";
 import type { Meeting, Output, Segment, Version } from "@/lib/model";
+import { intakeLabels, type IntakeRef, type IntakeResponse } from "@/lib/intake-model";
 type Detail = {
   meeting: Meeting;
   segments: Segment[];
@@ -24,9 +25,10 @@ type Detail = {
   links: ReviewLink[];
   recordingUrl: string | null;
   isAdmin: boolean;
+  intakes: IntakeResponse[];
 };
 type Tab = "brief" | "decisions" | "tasks" | "followUp";
-type Evidence = { text: string; segmentIds: string[] };
+type Evidence = { text: string; segmentIds: string[]; intakeRefs?: IntakeRef[] };
 export function MeetingEditor({ id }: { id: string }) {
   const [data, setData] = useState<Detail | null>(null);
   const [segments, setSegments] = useState<Segment[]>([]);
@@ -41,6 +43,7 @@ export function MeetingEditor({ id }: { id: string }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [shareUrl, setShareUrl] = useState("");
+  const [intakeId, setIntakeId] = useState("");
   const [deleteKind, setDeleteKind] = useState<"recording" | "meeting" | null>(
     null,
   );
@@ -90,6 +93,14 @@ export function MeetingEditor({ id }: { id: string }) {
     void load();
   }, [load]);
   useEffect(() => {
+    const segmentId = new URLSearchParams(window.location.search).get("segment");
+    const segment = segments.find((s) => s.id === segmentId);
+    if (segment) {
+      playbackPosition.current = segment.start_ms / 1000;
+      document.getElementById(`segment-${segment.id}`)?.scrollIntoView({ block: "nearest" });
+    }
+  }, [segments.length]);
+  useEffect(() => {
     const timer = setInterval(() => void load(), 5000);
     return () => clearInterval(timer);
   }, [load]);
@@ -138,7 +149,7 @@ export function MeetingEditor({ id }: { id: string }) {
       void media.current.play().catch(() => {});
     }
   }
-  function citations(ids: string[]) {
+  function citations(ids: string[], intakeRefs: IntakeRef[] = []) {
     return (
       <div className="citations">
         {ids.map((sid) => {
@@ -157,6 +168,10 @@ export function MeetingEditor({ id }: { id: string }) {
             </button>
           );
         })}
+        {intakeRefs.map((ref) => {
+          const intake = data?.intakes.find((i) => i.id === ref.responseId);
+          return <details className="intake-citation" key={`${ref.responseId}:${ref.field}`}><summary>Intake · {intakeLabels[ref.field]}</summary><blockquote>{intake?.answers[ref.field] || "Source unavailable"}</blockquote><p className="small muted">Client-submitted {intake ? new Date(intake.created_at).toLocaleString() : ""}. This is not a recording timestamp.</p></details>;
+        })}
       </div>
     );
   }
@@ -174,7 +189,7 @@ export function MeetingEditor({ id }: { id: string }) {
             value={item.text}
             onChange={(e) => update(i, e.target.value)}
           />
-          {citations(item.segmentIds)}
+          {citations(item.segmentIds, item.intakeRefs)}
         </div>
       ))
     ) : (
@@ -205,6 +220,7 @@ export function MeetingEditor({ id }: { id: string }) {
       <Link href="/app/meetings" className="row muted small">
         <ArrowLeft size={14} /> All meetings
       </Link>
+      <Link className="small text-link" href={`/app/projects/${m.project_id}`}>Project intake & scope changes ↗</Link>
       <div className="row between">
         <div>
           <h1>{m.title}</h1>
@@ -273,7 +289,9 @@ export function MeetingEditor({ id }: { id: string }) {
                 playbackPosition.current = e.currentTarget.currentTime;
               }}
               onLoadedMetadata={(e) => {
-                e.currentTarget.currentTime = playbackPosition.current;
+                const sid = new URLSearchParams(window.location.search).get("segment");
+                const target = segments.find((s) => s.id === sid);
+                e.currentTarget.currentTime = playbackPosition.current || (target ? target.start_ms / 1000 : 0);
               }}
               ref={media}
               controls
@@ -303,6 +321,16 @@ export function MeetingEditor({ id }: { id: string }) {
                 outputs.
               </p>
               <div className="transcript-list">
+                {query &&
+                  !segments.some((s) =>
+                    `${s.text} ${s.speaker}`
+                      .toLowerCase()
+                      .includes(query.toLowerCase()),
+                  ) && (
+                    <p className="notice" role="status">
+                      No transcript matches. Try another word or speaker name.
+                    </p>
+                  )}
                 {segments
                   .filter((s) =>
                     `${s.text} ${s.speaker}`
@@ -310,7 +338,7 @@ export function MeetingEditor({ id }: { id: string }) {
                       .includes(query.toLowerCase()),
                   )
                   .map((s) => (
-                    <div className="segment" key={s.id}>
+                    <div className="segment" id={`segment-${s.id}`} key={s.id}>
                       <div className="row between">
                         <input
                           aria-label="Speaker name"
@@ -356,7 +384,7 @@ export function MeetingEditor({ id }: { id: string }) {
                     </div>
                   ))}
               </div>
-              <div className="saving-bar">
+              <div className="saving-bar" data-dirty={transcriptDirty}>
                 <span className="small muted">
                   {transcriptDirty
                     ? "Unsaved transcript changes"
@@ -425,7 +453,7 @@ export function MeetingEditor({ id }: { id: string }) {
               }
               onClick={() =>
                 void action(async () => {
-                  await api(`meetings/${id}/generate`, "POST", {});
+                  await api(`meetings/${id}/generate`, "POST", { intakeId: intakeId || null });
                   await load();
                 })
               }
@@ -434,6 +462,7 @@ export function MeetingEditor({ id }: { id: string }) {
               {content ? "Generate new draft" : "Generate outputs"}
             </Button>
           </div>
+          {data.intakes?.length > 0 && <label className="label intake-context">Intake context for the next draft<select value={intakeId} disabled={processing || busy} onChange={(e) => setIntakeId(e.target.value)}><option value="">Use the transcript only</option>{data.intakes.map((intake) => <option key={intake.id} value={intake.id}>{intake.name} · {new Date(intake.created_at).toLocaleString()}</option>)}</select><span className="small muted">Intake answers will have separate source labels. Conflicts with the meeting remain open questions.</span></label>}
           {!content ? (
             <div className="empty">
               <FileCheck2 size={32} />
@@ -481,7 +510,33 @@ export function MeetingEditor({ id }: { id: string }) {
                   to incorporate corrections.
                 </p>
               )}
-              <div className="tabs" role="tablist" aria-label="Meeting outputs">
+              <div
+                className="tabs"
+                role="tablist"
+                aria-label="Meeting outputs"
+                onKeyDown={(event) => {
+                  if (event.altKey || event.ctrlKey || event.metaKey) return;
+                  const tabs: Tab[] = [
+                    "brief",
+                    "decisions",
+                    "tasks",
+                    "followUp",
+                  ];
+                  let next = tabs.indexOf(tab);
+                  if (event.key === "ArrowRight")
+                    next = (next + 1) % tabs.length;
+                  else if (event.key === "ArrowLeft")
+                    next = (next + tabs.length - 1) % tabs.length;
+                  else if (event.key === "Home") next = 0;
+                  else if (event.key === "End") next = tabs.length - 1;
+                  else return;
+                  event.preventDefault();
+                  setTab(tabs[next]);
+                  event.currentTarget
+                    .querySelectorAll<HTMLButtonElement>("[role=tab]")
+                    [next].focus();
+                }}
+              >
                 {(["brief", "decisions", "tasks", "followUp"] as Tab[]).map(
                   (t) => (
                     <button
@@ -491,6 +546,7 @@ export function MeetingEditor({ id }: { id: string }) {
                       id={`tab-${t}`}
                       aria-controls="output-panel"
                       aria-selected={tab === t}
+                      tabIndex={tab === t ? 0 : -1}
                       onClick={() => setTab(t)}
                     >
                       {t === "followUp"
@@ -620,7 +676,7 @@ export function MeetingEditor({ id }: { id: string }) {
                               />
                             </label>
                           </div>
-                          {citations(t.segmentIds)}
+                          {citations(t.segmentIds, t.intakeRefs)}
                         </div>
                       ))
                     ) : (
@@ -645,7 +701,7 @@ export function MeetingEditor({ id }: { id: string }) {
                   </label>
                 )}
               </div>
-              <div className="saving-bar">
+              <div className="saving-bar" data-dirty={dirty}>
                 <span className="small muted">
                   {dirty
                     ? "Unsaved changes · save as a new version"

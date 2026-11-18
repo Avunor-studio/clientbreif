@@ -1,7 +1,7 @@
 import { SignIn } from "@clerk/nextjs";
 import { Suspense } from "react";
 import { Setup } from "@/components/setup";
-import { Brand } from "@/components/brand";
+import { AuthFrame } from "@/components/auth-frame";
 
 export default function SignInPage() {
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY)
@@ -11,8 +11,7 @@ export default function SignInPage() {
       />
     );
   return (
-    <div className="auth-page">
-      <Brand />
+    <AuthFrame>
       <Suspense>
         <SignIn
           forceRedirectUrl="/app"
@@ -20,6 +19,6 @@ export default function SignInPage() {
           signUpUrl="/sign-up"
         />
       </Suspense>
-    </div>
+    </AuthFrame>
   );
 }

@@ -1,5 +1,6 @@
 import { withWorkflow } from "workflow/next";
 import type { NextConfig } from "next";
+import { getSiteConfig, privatePaths } from "./src/lib/seo";
 const config: NextConfig = {
   poweredByHeader: false,
   experimental: { cpus: 2, turbopackFileSystemCacheForDev: false },
@@ -14,6 +15,21 @@ const config: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
         ],
       },
+      ...(getSiteConfig().indexable
+        ? privatePaths.map((path) => ({
+            source: `${path}/:path*`,
+            headers: [
+              { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+            ],
+          }))
+        : [
+            {
+              source: "/:path*",
+              headers: [
+                { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+              ],
+            },
+          ]),
     ];
   },
 };
