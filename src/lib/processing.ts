@@ -203,7 +203,13 @@ export async function failRun(runId: string, message: string) {
 export async function cleanupMeeting(id: string) {
   const db = adminDb();
   const m = unwrap(await db.from("meetings").select("*").eq("id", id).single());
-  if (m.cleanup_status === "completed") return;
+  if (m.cleanup_status !== "pending" && m.cleanup_status !== "failed") return;
+  function updateCleanup(values: Record<string, string | null>) {
+    const query = db.from("meetings").update(values).eq("id", id)
+      .in("cleanup_status", ["pending", "failed"]);
+    // A recording-only worker cannot complete or fail a newer full deletion.
+    return m.deleted_at ? query.not("deleted_at", "is", null) : query.is("deleted_at", null);
+  }
   try {
     if (m.provider_id)
       await assembly(`transcript/${m.provider_id}`, { method: "DELETE" });
@@ -234,26 +240,20 @@ export async function cleanupMeeting(id: string) {
       unwrap(await db.from("processing_runs").delete().eq("meeting_id", id));
     }
     unwrap(
-      await db
-        .from("meetings")
-        .update({
+      await updateCleanup({
           cleanup_status: "completed",
           cleanup_error: null,
           recording_path: null,
           provider_id: null,
           ...(m.deleted_at ? { title: "Deleted meeting", error: null } : {}),
-        })
-        .eq("id", id),
+      }),
     );
   } catch (error) {
-    await db
-      .from("meetings")
-      .update({
+    await updateCleanup({
         cleanup_status: "failed",
         cleanup_error:
           error instanceof Error ? error.message : "Cleanup failed",
-      })
-      .eq("id", id);
+    });
     throw error;
   }
 }

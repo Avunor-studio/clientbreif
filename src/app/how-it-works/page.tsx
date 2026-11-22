@@ -18,7 +18,11 @@ const title =
   "How ClientBrief works — From meeting recording to client approval";
 const description =
   "Explore ClientBrief’s recording-to-brief workflow: upload, correct transcripts, generate editable outputs, save versions, and share a brief for client review.";
-export const metadata = publicMetadata(title, description, "/how-it-works");
+export const metadata = publicMetadata(title, description, "/how-it-works", [
+  "meeting recording to project brief",
+  "searchable meeting transcript",
+  "client brief approval workflow",
+]);
 const steps = [
   {
     title: "Give the conversation a home.",
@@ -66,9 +70,9 @@ export default function HowItWorks() {
       <section className="subpage-hero site-width">
         <span className="eyebrow">HOW IT WORKS</span>
         <h1>
-          A recording comes in.
+          From meeting recording
           <br />
-          <em>A clear handoff comes out.</em>
+          <em>to client approval.</em>
         </h1>
         <p>
           Six deliberate steps, with room for your judgment.

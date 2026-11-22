@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { start } from "workflow/api";
 import { HookConflictError } from "workflow/errors";
-import { checked, context, HttpError } from "./server";
+import { checked, context, HttpError, readJsonObject } from "./server";
 import { adminDb } from "./admin-db";
 import { idSchema } from "./model";
 import { intakeSubmissionSchema } from "./intake-model";
@@ -15,7 +15,7 @@ import type { NextRequest } from "next/server";
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
 const tokenSchema = z.string().regex(/^[a-f0-9]{64}$/);
 export async function publicIntake(req: NextRequest, action: string) {
-  const body = await req.json();
+  const body = await readJsonObject(req);
   const token = tokenSchema.parse(body.token);
   const db = adminDb();
   const link = checked(await db.from("intake_links").select("id,project_id,expires_at,revoked_at").eq("token_hash", hash(token)).maybeSingle());
@@ -69,7 +69,7 @@ export async function projectFeature(req: NextRequest, path: string[], ctx: Awai
   if (path[2] === "prepare" || path[2] === "scope-check") {
     if (method !== "POST") throw new HttpError(405, "Use POST for this action.");
     env(generationApiKeyName());
-    const body = await req.json();
+    const body = await readJsonObject(req);
     const input = path[2] === "prepare"
       ? { p_intake: idSchema.parse(body.intakeId), p_meeting: null, p_baseline: null }
       : { p_intake: null, p_meeting: idSchema.parse(body.meetingId), p_baseline: idSchema.parse(body.baselineId) };
@@ -87,7 +87,7 @@ export async function projectFeature(req: NextRequest, path: string[], ctx: Awai
     return { runId: run.id, status: run.status };
   }
   if (path[2] === "changes" && method === "PATCH") {
-    const input = changeReviewSchema.parse(await req.json());
+    const input = changeReviewSchema.parse(await readJsonObject(req));
     // The scoped read also excludes deleted meetings and deleted baselines.
     const change = checked(await db.from("scope_changes").select("id,revision").eq("id", idSchema.parse(path[3])).eq("project_id", id).maybeSingle());
     if (!change) throw new HttpError(404, "Scope suggestion not found.");

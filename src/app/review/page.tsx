@@ -3,10 +3,15 @@ import { useEffect, useState } from "react";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/browser-api";
-import type { Output } from "@/lib/model";
 type Review = {
   title: string;
-  brief: Output["brief"];
+  brief: {
+    overview: string;
+    scope: { text: string }[];
+    deliverables: { text: string }[];
+    requirements: { text: string }[];
+    openQuestions: string[];
+  };
   versionDate: string;
   expiresAt: string;
   response: { decision: string; comments: string; name: string } | null;

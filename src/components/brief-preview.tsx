@@ -8,41 +8,33 @@ export function BriefPreview({ compact = false }: { compact?: boolean }) {
     >
       <div className="document-meta">
         <span>
-          <FileText size={13} /> PROJECT BRIEF / 001
+          <FileText size={13} /> SAMPLE PROJECT BRIEF
         </span>
         <span className="document-status">
-          <Check size={12} /> Reviewed draft
+          <Check size={12} /> Saved draft
         </span>
       </div>
-      <h3>
-        A clearer website.
-        <br />A simpler enquiry.
-      </h3>
-      <p className="document-client">
-        Fieldwork Studio × Northstar · Example project
-      </p>
+      <h3>North Star Website</h3>
+      <p className="document-client">Website discovery · Sample meeting</p>
       <div className="document-rule" />
-      <span className="document-label">THE OBJECTIVE</span>
-      <p>
-        Help visitors understand the services and get in touch without a long
-        enquiry form.
-      </p>
+      <span className="document-label">PROJECT OVERVIEW</span>
+      <p>Discovery call for a five-page website with a contact form.</p>
       <span className="document-label">AGREED SCOPE</span>
       <ul>
-        <li>Refresh five core website pages.</li>
-        <li>Replace the current enquiry form with four fields.</li>
+        <li>Build five website pages.</li>
+        <li>Include a contact form.</li>
       </ul>
       <span className="source-note">
-        <Link2 size={12} /> Source: discovery call, 04:32
+        <Link2 size={12} /> Discovery call transcript
       </span>
       {!compact && (
         <>
           <span className="document-label">STILL TO CONFIRM</span>
-          <p>Who will supply the final photography?</p>
+          <p>Who will supply the photos, and when is delivery?</p>
         </>
       )}
       <div className="document-foot">
-        <span>Saved version 01</span>
+        <span>Version 1</span>
         <span>
           Ready for client review <ArrowRight size={13} />
         </span>

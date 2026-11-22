@@ -1,304 +1,234 @@
+import { getImageProps } from "next/image";
 import Link from "next/link";
 import {
-  ArrowRight,
+  ArrowDown,
   ArrowUpRight,
+  AudioLines,
   Check,
-  CornerDownRight,
+  ChevronDown,
   FileCheck2,
-  Headphones,
-  Link2,
-  LockKeyhole,
+  FilePenLine,
+  Upload,
 } from "lucide-react";
-import {
-  HeroProduct,
-  MarketingLayout,
-  WorkspaceCta,
-  workflowSteps,
-} from "@/components/marketing";
+import { MarketingLayout, WorkspaceCta } from "@/components/marketing";
 import { OutputDemo } from "@/components/output-demo";
 import { publicMetadata } from "@/lib/seo";
 
 const title =
-  "ClientBrief — Client meeting transcripts, project briefs & approvals";
+  "AI Meeting Transcription & Project Briefs for Agencies | ClientBrief";
 const description =
-  "Turn client meeting recordings into editable project briefs, decisions, action items, and follow-up drafts. Review the transcript and get client approval on a saved brief.";
-export const metadata = publicMetadata(title, description, "/");
+  "Turn client meeting recordings into searchable transcripts, editable project briefs, action items, and follow-up emails. Share a saved brief for client approval.";
+
+export const metadata = publicMetadata(title, description, "/", [
+  "AI meeting transcription",
+  "AI project brief generator",
+  "client meeting notes",
+  "agency project management",
+  "client approval software",
+]);
+
+const steps = [
+  {
+    icon: Upload,
+    title: "Upload a recording",
+    text: "Add an audio or video file to a client project after the meeting.",
+    detail: "MP3, WAV, M4A, MP4, WebM",
+  },
+  {
+    icon: AudioLines,
+    title: "Review the transcript",
+    text: "Search the conversation, play it from a timestamp, and correct speakers or wording.",
+    detail: "English transcription",
+  },
+  {
+    icon: FilePenLine,
+    title: "Draft the handoff",
+    text: "Generate a project brief, decisions, action items, and a follow-up email. Edit and save a version.",
+    detail: "Source-linked outputs",
+  },
+  {
+    icon: FileCheck2,
+    title: "Get client approval",
+    text: "Send a saved brief for approval or a change request. Each response applies to that version.",
+    detail: "Revocable review link",
+  },
+];
 
 const questions = [
   [
-    "What does ClientBrief actually do?",
-    "ClientBrief is an agency workspace for the work after a client meeting. Upload a recording, check the transcript, and generate a project brief, decisions, tasks, and a follow-up email draft. Your team edits and saves the work before sharing a brief with the client.",
+    "How does AI meeting transcription work?",
+    "Upload a recording and ClientBrief creates an English transcript with speaker labels and timestamps. Search it, revisit the audio, and save your corrections before generating a brief.",
   ],
   [
-    "Can I upload a video meeting?",
-    "Yes. Upload MP3, WAV, M4A, MP4, or WebM files up to 250 MB and 60 minutes. Transcription is English-first. Video processing uses spoken audio; it does not analyze slides, screens, or other visual content.",
+    "Which meeting recording formats can I upload?",
+    "ClientBrief accepts MP3, WAV, M4A, MP4, and WebM files up to 250 MB and 60 minutes. Video transcription uses the spoken audio.",
   ],
   [
-    "Can I correct what the AI produces?",
-    "Yes. Correct the transcript and speaker names before generating. Edit the generated outputs and explicitly save them. Generating again creates another draft rather than overwriting a saved version.",
+    "Can clients approve a project brief without an account?",
+    "Yes. An agency administrator can share a saved version using a review link. Clients can approve it or request changes. Review links expire after seven days and can be revoked.",
   ],
   [
-    "What can my client see?",
-    "Only the saved brief version shared through their review link. Recordings, transcripts, internal tasks, and other projects are not included. Review links expire after seven days and can be revoked by an administrator.",
+    "What can a client see through the review link?",
+    "The link opens the shared brief version. Recordings, transcripts, internal task lists, and other projects stay in the agency workspace.",
   ],
   [
-    "Does it join my meetings or send emails?",
-    "Upload a recording after your meeting; ClientBrief does not join calls. The follow-up email is a draft you can copy, review, and send yourself. You can also export the transcript as text, the brief as Markdown, and tasks as CSV.",
+    "Which formats can I export?",
+    "Export the transcript as plain text, the brief as Markdown, and tasks as CSV. You can also copy the follow-up email draft into your email app.",
   ],
   [
-    "How long are recordings kept?",
-    "Recordings remain until you explicitly delete them. Recording-only deletion preserves your generated work. Full meeting deletion removes the associated transcript, outputs, and review links, with cleanup progress visible in settings. Transcription and generation use external service providers; review their data terms before uploading confidential material.",
+    "How long are meeting recordings kept?",
+    "Recordings stay in private storage until you delete them. Deleting the recording preserves the generated work. You can also delete the whole meeting. External providers process transcription and AI generation.",
   ],
 ] as const;
+
+const { props: workspacePreview } = getImageProps({
+  src: "/images/clientbrief-meeting-workspace.jpg",
+  alt: "ClientBrief workspace for a sample website discovery meeting",
+  width: 1200,
+  height: 690,
+  sizes: "(max-width: 900px) calc(100vw - 60px), (max-width: 1296px) calc(100vw - 96px), 1200px",
+  loading: "eager",
+});
 
 export default function Home() {
   return (
     <MarketingLayout path="/" title={title} description={description}>
-      <section className="marketing-hero site-width">
-        <div className="hero-copy">
-          <div className="eyebrow">
-            <span className="eyebrow-rule" /> THE AFTER-MEETING WORKSPACE
-          </div>
-          <h1>
-            Turn client
-            <br />
-            meetings into
-            <br />
-            <em>project briefs.</em>
-          </h1>
-          <p className="hero-description">
-            The call went well. Now make it useful.
-          </p>
-          <p className="hero-body">
-            Bring your recording. Get an editable brief, decisions, tasks, and a
-            follow-up draft. Review the details with your team, then get your
-            client on the same page.
-          </p>
-          <div className="hero-actions">
-            <Link className="btn btn-primary" href="/app">
-              Create your workspace <ArrowUpRight size={17} />
-            </Link>
-            <a className="text-link" href="#outputs">
-              See an example brief <ArrowRight size={16} />
-            </a>
-          </div>
-          <div className="hero-note">
-            <Check size={14} />
-            <span>Your words. Your edits. Your final say.</span>
-          </div>
+      <section className="home-hero site-width">
+        <span className="hero-kicker">
+          For agencies and client-facing teams
+        </span>
+        <h1>
+          Turn client meetings into <em>project briefs.</em>
+        </h1>
+        <p>
+          Upload a meeting recording. Get an editable brief, decisions, action
+          items, and a follow-up draft. Check the transcript and share the
+          version your client should review.
+        </p>
+        <div className="home-actions">
+          <Link className="btn btn-primary" href="/app">
+            Create your workspace <ArrowUpRight size={16} />
+          </Link>
+          <a className="btn btn-outline" href="#outputs">
+            See an example brief <ArrowDown size={15} />
+          </a>
         </div>
-        <HeroProduct />
+        <figure className="workspace-preview">
+          <figcaption>
+            <span>
+              <span className="preview-dot" /> ClientBrief workspace
+            </span>
+            <span>Sample website discovery meeting</span>
+          </figcaption>
+          <picture>
+            <source
+              media="(max-width: 640px)"
+              srcSet="/images/clientbrief-meeting-workspace-mobile.jpg"
+              width={354}
+              height={390}
+            />
+            <img {...workspacePreview} />
+          </picture>
+        </figure>
       </section>
 
-      <div className="capability-strip">
-        <div className="site-width">
-          <span>
-            FROM THE CALL
-            <br />
-            <strong>TO THE WORK.</strong>
-          </span>
-          <span>
-            <Headphones size={18} /> Audio & video uploads
-          </span>
-          <span>
-            <Link2 size={18} /> Source-linked details
-          </span>
-          <span>
-            <FileCheck2 size={18} /> Versioned client review
-          </span>
-        </div>
-      </div>
-
-      <section className="marketing-section site-width" id="outputs">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">01 / THE HANDOFF</span>
+      <section className="home-workflow" id="workflow">
+        <div className="site-width home-section">
+          <div className="home-section-heading">
+            <span className="eyebrow">The workflow</span>
             <h2>
-              A conversation is a start.
-              <br />
-              <em>This is what comes next.</em>
+              From meeting recording
+              <br className="desktop-break" /> to client approval.
             </h2>
+            <p>
+              Review what was said, decide what goes into the brief, and keep
+              the approved version with the project.
+            </p>
           </div>
-          <p>
-            The scope. The decisions. The things somebody needs to do. Put them
-            into a format your team can actually work with.
-          </p>
-        </div>
-        <OutputDemo />
-        <div className="demo-footnote">
-          <span>
-            Illustrative agency project. Select an output to take a look.
-          </span>
-          <span>
-            <CornerDownRight size={14} /> Everything stays editable.
-          </span>
-        </div>
-      </section>
-
-      <section className="workflow-section">
-        <div className="site-width marketing-section">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">02 / A CONSIDERED WORKFLOW</span>
-              <h2>
-                AI does the first pass.
-                <br />
-                <em>You make the call.</em>
-              </h2>
-            </div>
-            <Link className="text-link" href="/how-it-works">
-              Walk through the process <ArrowUpRight size={17} />
-            </Link>
-          </div>
-          <ol className="workflow-steps">
-            {workflowSteps.map((step) => (
-              <li key={step.number}>
-                <span className="step-number">{step.number}</span>
-                <h3>{step.title}</h3>
-                <p>{step.text}</p>
+          <ol className="workflow-cards">
+            {steps.map(({ icon: Icon, title, text, detail }) => (
+              <li key={title}>
+                <span className="workflow-icon">
+                  <Icon size={20} aria-hidden="true" />
+                </span>
+                <h3>{title}</h3>
+                <p>{text}</p>
+                <span className="workflow-detail">{detail}</span>
               </li>
             ))}
           </ol>
+          <Link className="text-link" href="/how-it-works">
+            Explore the full workflow <ArrowUpRight size={15} />
+          </Link>
         </div>
       </section>
 
-      <section className="marketing-section site-width review-story">
-        <div className="review-story-copy">
-          <span className="eyebrow">03 / LESS BACK-AND-FORTH</span>
-          <h2>
-            “Is this what
-            <br />
-            <em>we agreed?”</em>
-          </h2>
+      <section className="site-width home-section" id="outputs">
+        <div className="section-heading home-section-heading">
+          <div>
+            <span className="eyebrow">Example outputs</span>
+            <h2>
+              Four deliverables
+              <br className="desktop-break" /> from one client call.
+            </h2>
+          </div>
           <p>
-            Give your client something specific to review. Share a saved brief,
-            receive an approval or a change request, and keep that response
-            attached to that version.
-          </p>
-          <ul className="plain-checks">
-            <li>
-              <Check size={16} /> The client sees only the brief you share.
-            </li>
-            <li>
-              <Check size={16} /> Links expire after seven days.
-            </li>
-            <li>
-              <Check size={16} /> Later edits become a separate version.
-            </li>
-          </ul>
-        </div>
-        <div className="review-example">
-          <span className="sample-tag">EXAMPLE CLIENT REVIEW</span>
-          <div className="review-example-heading">
-            <span className="document-label">NORTHSTAR / WEBSITE REFRESH</span>
-            <h3>
-              One brief.
-              <br />A shared understanding.
-            </h3>
-          </div>
-          <div className="review-scope">
-            <span className="document-label">SCOPE / VERSION 01</span>
-            <p>
-              Five core pages. A four-field enquiry form.
-              <br />
-              Photography source to be confirmed.
-            </p>
-          </div>
-          <div className="review-approval">
-            <span className="approval-seal">
-              <Check size={20} />
-            </span>
-            <div>
-              <strong>Version 01 approved</strong>
-              <span>Alex · Client response</span>
-            </div>
-            <span className="review-example-date">Saved with this version</span>
-          </div>
-          <p className="example-caption">
-            Illustrative response, not a customer testimonial.
+            Explore a website discovery project. Each draft can be checked
+            against the conversation and edited by your team.
           </p>
         </div>
+        <OutputDemo />
       </section>
 
-      <section className="agency-section">
-        <div className="site-width marketing-section">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">04 / MADE FOR CLIENT WORK</span>
-              <h2>
-                From the first discovery
-                <br />
-                <em>to the project kickoff.</em>
-              </h2>
-            </div>
-            <Link className="text-link" href="/for-agencies">
-              Inside an agency workflow <ArrowUpRight size={17} />
-            </Link>
+      <div className="home-facts">
+        <dl className="site-width">
+          <div>
+            <dt>
+              Recording formats<span>Audio and video uploads</span>
+            </dt>
+            <dd>5</dd>
           </div>
-          <div className="agency-usecases">
-            <article>
-              <span>DISCOVERY</span>
-              <h3>Capture the real ask.</h3>
-              <p>
-                Bring goals, requirements, and unanswered questions into a brief
-                the client can review.
-              </p>
-            </article>
-            <article>
-              <span>CREATIVE & WEB PROJECTS</span>
-              <h3>Give the team a starting point.</h3>
-              <p>
-                Turn agreed deliverables and decisions into a useful handoff for
-                designers and developers.
-              </p>
-            </article>
-            <article>
-              <span>ACCOUNT MANAGEMENT</span>
-              <h3>Close the loop after the call.</h3>
-              <p>
-                Check next steps, keep owners and dates honest, and prepare a
-                follow-up in the same workspace.
-              </p>
-            </article>
+          <div>
+            <dt>
+              Meeting length<span>Up to 250 MB per file</span>
+            </dt>
+            <dd>60 min</dd>
           </div>
-        </div>
-      </section>
+          <div>
+            <dt>
+              Client review window<span>Links can be revoked sooner</span>
+            </dt>
+            <dd>7 days</dd>
+          </div>
+          <div>
+            <dt>
+              Approval history<span>Saved approvals stay with the brief</span>
+            </dt>
+            <dd>By version</dd>
+          </div>
+        </dl>
+      </div>
 
-      <section className="privacy-note site-width">
-        <LockKeyhole size={25} />
-        <div>
-          <h3>Share the brief. Keep the working context.</h3>
-          <p>
-            Recordings and transcripts stay within your agency workspace. Shared
-            review pages expose only the selected brief. You control when
-            recordings are deleted.
-          </p>
-        </div>
-        <Link className="text-link" href="/how-it-works#recordings">
-          Recording & data <ArrowUpRight size={16} />
-        </Link>
-      </section>
-
-      <section className="marketing-section site-width faq-section" id="faq">
-        <div>
-          <span className="eyebrow">A FEW PRACTICAL QUESTIONS</span>
-          <h2>
-            Before your
-            <br />
-            <em>first upload.</em>
-          </h2>
+      <section className="site-width home-section home-faq" id="faq">
+        <div className="home-section-heading">
+          <span className="eyebrow">Frequently asked questions</span>
+          <h2>Before your first upload.</h2>
+          <p>Recording formats, client review, exports, and data retention.</p>
         </div>
         <div className="faq-list">
           {questions.map(([question, answer]) => (
             <details key={question}>
               <summary>
                 {question}
-                <span aria-hidden="true">+</span>
+                <ChevronDown size={17} aria-hidden="true" />
               </summary>
               <p>{answer}</p>
             </details>
           ))}
         </div>
+        <Link className="text-link" href="/how-it-works#recordings">
+          <Check size={15} /> Read about recordings and data
+        </Link>
       </section>
       <WorkspaceCta />
     </MarketingLayout>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getSiteConfig, publicMetadata, publicPaths } from "../src/lib/seo";
+import { getSiteConfig, publicMetadata, publicPageSchema, publicPaths } from "../src/lib/seo";
 import robots from "../src/app/robots";
 import sitemap from "../src/app/sitemap";
 
@@ -68,5 +68,24 @@ describe("public-site indexing boundary", () => {
     expect(
       publicMetadata("Example", "Description", "/").alternates,
     ).toBeUndefined();
+  });
+  it("describes the public product with its canonical URL, keywords and real screenshot", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("SITE_URL", "https://clientbrief.example");
+    vi.stubEnv("SITE_INDEXABLE", "true");
+    const title = "ClientBrief";
+    const description = "Meeting recordings to editable project briefs.";
+    expect(publicMetadata(title, description, "/", ["meeting transcription"])).toMatchObject({
+      alternates: { canonical: "https://clientbrief.example/" },
+      keywords: ["meeting transcription"],
+      robots: { index: true, follow: true },
+    });
+    expect(publicPageSchema("/", title, description)["@graph"]).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        "@type": "WebApplication",
+        screenshot: "https://clientbrief.example/images/clientbrief-meeting-workspace.jpg",
+      }),
+    ]));
   });
 });

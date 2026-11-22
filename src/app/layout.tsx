@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { shadcn } from "@clerk/ui/themes";
-import { Instrument_Serif, Manrope } from "next/font/google";
+import { Geist, Newsreader } from "next/font/google";
 import { getSiteConfig, privateMetadata } from "@/lib/seo";
 import "./globals.css";
 import "./product.css";
 import "./marketing.css";
-const bodyFont = Manrope({
+const bodyFont = Geist({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
   variable: "--font-body",
   display: "swap",
 });
-const editorialFont = Instrument_Serif({
+const editorialFont = Newsreader({
   subsets: ["latin"],
-  weight: ["400"],
   style: ["normal", "italic"],
   variable: "--font-editorial",
   display: "swap",
@@ -46,16 +44,16 @@ export default function RootLayout({
             appearance={{
               theme: shadcn,
               variables: {
-                colorPrimary: "#6f2737",
+                colorPrimary: "#111111",
                 colorPrimaryForeground: "#ffffff",
-                colorBackground: "#fffcf7",
-                colorForeground: "#252521",
-                colorMuted: "#eee8de",
-                colorMutedForeground: "#6d6862",
-                colorBorder: "#ddd6ca",
-                colorInput: "#fffdfa",
-                colorInputForeground: "#252521",
-                colorRing: "#6f273740",
+                colorBackground: "#ffffff",
+                colorForeground: "#18181b",
+                colorMuted: "#f1f1f3",
+                colorMutedForeground: "#5d5d66",
+                colorBorder: "#dedee3",
+                colorInput: "#ffffff",
+                colorInputForeground: "#18181b",
+                colorRing: "#18181b55",
                 colorSuccess: "#2d6349",
                 colorDanger: "#a0382f",
                 fontFamily: "var(--font-body), Arial, sans-serif",

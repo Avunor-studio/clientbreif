@@ -12,7 +12,7 @@ vi.mock("@clerk/nextjs/server", () => ({
   }),
 }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: mocks.createClient }));
-import { checked, context } from "../src/lib/server";
+import { checked, context, scopedMeeting } from "../src/lib/server";
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
@@ -74,5 +74,32 @@ describe("agency access", () => {
       data: [{ role: "org:admin", publicUserData: { userId: "user_a" } }],
     });
     await expect(context(true)).resolves.toMatchObject({ isAdmin: true });
+  });
+  it("denies an unrecognized workspace role before creating a database client", async () => {
+    mocks.members.mockResolvedValue({
+      data: [{ role: "org:guest", publicUserData: { userId: "user_a" } }],
+    });
+    await expect(context()).rejects.toMatchObject({ status: 403 });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+  it("denies a member access to the admin cleanup lookup", async () => {
+    const ctx = await context();
+    mocks.createClient.mockClear();
+    await expect(scopedMeeting(ctx, "meeting_a", true)).rejects.toMatchObject({ status: 403 });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+  });
+  it("scopes admin cleanup retries to the verified organization and meeting", async () => {
+    mocks.members.mockResolvedValue({
+      data: [{ role: "org:admin", publicUserData: { userId: "user_a" } }],
+    });
+    const ctx = await context();
+    vi.stubEnv("SUPABASE_SECRET_KEY", "test-server");
+    const query = {
+      from: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(), maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+    mocks.createClient.mockReturnValue(query);
+    await expect(scopedMeeting(ctx, "meeting_a", true)).rejects.toMatchObject({ status: 404 });
+    expect(query.eq.mock.calls).toEqual([["id", "meeting_a"], ["organization_id", "org_a"]]);
   });
 });

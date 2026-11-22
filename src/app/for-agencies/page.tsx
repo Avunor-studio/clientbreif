@@ -6,7 +6,11 @@ const title =
   "ClientBrief for agencies — Clearer discovery calls & project handoffs";
 const description =
   "Give account managers, project managers, and creative teams a shared record of client meetings. Review scope, decisions, action items, and version-specific client approvals.";
-export const metadata = publicMetadata(title, description, "/for-agencies");
+export const metadata = publicMetadata(title, description, "/for-agencies", [
+  "client meeting notes for agencies",
+  "website discovery brief",
+  "agency project handoff",
+]);
 const scenarios = [
   {
     number: "01",
@@ -55,9 +59,9 @@ export default function ForAgencies() {
       <section className="subpage-hero site-width">
         <span className="eyebrow">FOR AGENCIES & CLIENT-FACING TEAMS</span>
         <h1>
-          The call is over.
+          Client meeting notes
           <br />
-          <em>The client work isn’t.</em>
+          <em>for agency teams.</em>
         </h1>
         <p>
           Give account managers, project managers, and delivery teams

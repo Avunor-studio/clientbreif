@@ -9,14 +9,14 @@ export default function OpenGraphImage() {
         display: "flex",
         width: "100%",
         height: "100%",
-        background: "#f6f2ea",
+        background: "#f7f7f8",
         padding: "56px 70px",
-        color: "#252521",
+        color: "#111111",
         flexDirection: "column",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", fontSize: 30 }}>
-        ClientBrief<span style={{ color: "#6f2737" }}>.</span>
+        ClientBrief
       </div>
       <div
         style={{
@@ -29,28 +29,26 @@ export default function OpenGraphImage() {
         }}
       >
         <span>Turn client meetings</span>
-        <span>
-          into <span style={{ color: "#6f2737" }}>project briefs.</span>
-        </span>
+        <span>into project briefs.</span>
       </div>
       <div
         style={{
           display: "flex",
           fontSize: 23,
-          color: "#6d6862",
+          color: "#53535b",
           marginTop: 38,
         }}
       >
-        A recording. A reviewed brief. A shared next step.
+        Meeting transcription, editable briefs, and client approvals.
       </div>
       <div
         style={{
           display: "flex",
-          borderTop: "1px solid #ddd6ca",
+          borderTop: "1px solid #dedee3",
           paddingTop: 22,
           marginTop: "auto",
           fontSize: 16,
-          color: "#6f2737",
+          color: "#53535b",
           letterSpacing: 2,
         }}
       >

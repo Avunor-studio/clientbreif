@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { z } from "zod";
 import { start } from "workflow/api";
 import { HookConflictError } from "workflow/errors";
-import { context, checked, scopedMeeting, HttpError } from "@/lib/server";
+import { context, checked, scopedMeeting, HttpError, MAX_JSON_BODY_BYTES, readJsonObject } from "@/lib/server";
 import { adminDb } from "@/lib/admin-db";
+import { ApiBudgetError, limitAccount, limitVisitor, startsProcessing } from "@/lib/rate-limit";
 import { missingConfig, env, generationApiKeyName } from "@/lib/config";
 import { publicIntake, projectFeature } from "@/lib/project-api";
 import type { IntakeResponse } from "@/lib/intake-model";
@@ -13,8 +15,10 @@ import {
   outputSchema,
   validateReferences,
   validateUpload,
+  UploadValidationError,
   briefMarkdown,
   csvCell,
+  type Output,
   type Segment,
 } from "@/lib/model";
 import {
@@ -74,9 +78,16 @@ async function reviewRead(token: string) {
       .eq("link_id", link.id)
       .maybeSingle(),
   );
+  const brief = v.content.brief as Output["brief"];
   return {
     title: m.title,
-    brief: v.content.brief,
+    brief: {
+      overview: brief.overview,
+      scope: brief.scope.map(({ text }) => ({ text })),
+      deliverables: brief.deliverables.map(({ text }) => ({ text })),
+      requirements: brief.requirements.map(({ text }) => ({ text })),
+      openQuestions: brief.openQuestions,
+    },
     versionDate: v.created_at,
     expiresAt: link.expires_at,
     response,
@@ -95,11 +106,17 @@ async function handle(
       const allowed = new URL(process.env.APP_URL || req.url).origin;
       if (origin && origin !== allowed)
         throw new HttpError(403, "Request origin is not allowed.");
-      if (Number(req.headers.get("content-length") || 0) > 2_000_000)
+      if (Number(req.headers.get("content-length") || 0) > MAX_JSON_BODY_BYTES)
         throw new HttpError(413, "Request is too large.");
     }
+    if (method === "POST" && (path[0] === "review" || path[0] === "intake")) {
+      const userId = process.env.CLERK_SECRET_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        ? (await auth()).userId : null;
+      if (userId) await limitAccount(userId);
+      else await limitVisitor(req.headers);
+    }
     if (path[0] === "review" && method === "POST") {
-      const body = await req.json();
+      const body = await readJsonObject(req);
       const token = tokenSchema.parse(body.token);
       if (path[1] === "read") return ok(await reviewRead(token));
       if (path[1] === "respond") {
@@ -139,7 +156,7 @@ async function handle(
         503,
         `Setup required: configure ${missing.join(", ")}.`,
       );
-    const ctx = await context();
+    const ctx = await context(false, { processing: startsProcessing(method, path) });
     const db = ctx.db;
     const organization_id = ctx.orgId;
     if (path[0] === "bootstrap" && method === "GET") {
@@ -170,10 +187,13 @@ async function handle(
         db
           .from("processing_runs")
           .select("id,meeting_id,kind,status,created_at,finished_at,error"),
-        db
-          .from("meetings")
-          .select("id,title,cleanup_status,cleanup_error,deleted_at")
-          .in("cleanup_status", ["pending", "failed"]),
+        ctx.isAdmin
+          ? adminDb()
+              .from("meetings")
+              .select("id,title,cleanup_status,cleanup_error,deleted_at")
+              .eq("organization_id", organization_id)
+              .in("cleanup_status", ["pending", "failed"])
+          : { data: [], error: null },
         db.from("project_runs").select("id,project_id,kind,status,created_at,finished_at,error"),
       ]);
       const [clients, projects, meetings, links, versions, runs, cleanup, projectRuns] =
@@ -198,7 +218,7 @@ async function handle(
       if (method === "POST" || method === "PATCH") {
         const data = (
           resource === "clients" ? clientSchema : projectSchema
-        ).parse(await req.json());
+        ).parse(await readJsonObject(req));
         const result =
           method === "POST"
             ? await db
@@ -228,7 +248,7 @@ async function handle(
             duration: z.number(),
             consent: z.literal(true),
           })
-          .parse(await req.json());
+          .parse(await readJsonObject(req));
         const ext = validateUpload(b.name, b.size, b.mime, b.duration);
         const project = checked(
           await db
@@ -258,8 +278,13 @@ async function handle(
         );
         return ok(row, 201);
       }
+      const deleteMeetingRequest = method === "DELETE" && path.length === 2;
+      const deleteRecordingRequest = method === "DELETE" && path.length === 3 && path[2] === "recording";
+      if (method === "DELETE" && !deleteMeetingRequest && !deleteRecordingRequest)
+        throw new HttpError(404, "Endpoint not found.");
       const id = idSchema.parse(path[1]);
-      const m = await scopedMeeting(ctx, id, path[2] === "cleanup");
+      const retryCleanup = method === "POST" && path.length === 3 && path[2] === "cleanup";
+      const m = await scopedMeeting(ctx, id, retryCleanup);
       if (method === "GET" && path.length === 2) {
         const [segments, versions, links, intakes] = await Promise.all([
           db
@@ -309,7 +334,7 @@ async function handle(
       ) {
         const kind = path[2] === "generate" ? "generate" : "transcribe";
         const generationInput = kind === "generate"
-          ? z.object({ intakeId: idSchema.nullable().optional() }).parse(await req.json())
+          ? z.object({ intakeId: idSchema.nullable().optional() }).parse(await readJsonObject(req))
           : null;
         env(
           kind === "generate" ? generationApiKeyName() : "ASSEMBLYAI_API_KEY",
@@ -391,7 +416,7 @@ async function handle(
               .min(1)
               .max(10000),
           })
-          .parse(await req.json());
+          .parse(await readJsonObject(req));
         const result = await adminDb().rpc("edit_transcript", {
           p_meeting: id,
           p_org: organization_id,
@@ -404,7 +429,7 @@ async function handle(
       if (method === "POST" && path[2] === "outputs") {
         const input = z
           .object({ revision: z.number().int(), content: outputSchema })
-          .parse(await req.json());
+          .parse(await readJsonObject(req));
         const segments = checked(
           await db.from("transcript_segments").select("*").eq("meeting_id", id),
         ) as Segment[];
@@ -423,7 +448,7 @@ async function handle(
       }
       if (method === "POST" && path[2] === "share") {
         await context(true);
-        const input = z.object({ versionId: idSchema }).parse(await req.json());
+        const input = z.object({ versionId: idSchema }).parse(await readJsonObject(req));
         const version = checked(
           await db
             .from("output_versions")
@@ -450,7 +475,7 @@ async function handle(
       }
       if (method === "POST" && path[2] === "revoke") {
         await context(true);
-        const input = z.object({ linkId: idSchema }).parse(await req.json());
+        const input = z.object({ linkId: idSchema }).parse(await readJsonObject(req));
         const versions = checked(
           await db.from("output_versions").select("id").eq("meeting_id", id),
         );
@@ -467,16 +492,26 @@ async function handle(
         );
         return ok({ revoked: true });
       }
-      if (method === "DELETE" || (method === "POST" && path[2] === "cleanup")) {
+      if (deleteMeetingRequest || deleteRecordingRequest || retryCleanup) {
         await context(true);
-        const full =
-          method === "DELETE" ? path[2] !== "recording" : !!m.deleted_at;
-        const result = await adminDb().rpc("begin_cleanup", {
-          p_org: organization_id,
-          p_meeting: id,
-          p_full: full,
-        });
-        if (result.error) throw new Error(result.error.message);
+        if (retryCleanup) {
+          const cleanup = checked(await adminDb()
+            .from("meetings")
+            .update({ cleanup_status: "pending", cleanup_error: null })
+            .eq("id", id)
+            .eq("organization_id", organization_id)
+            .in("cleanup_status", ["pending", "failed"])
+            .select("id")
+            .maybeSingle());
+          if (!cleanup)
+            throw new HttpError(409, "There is no unfinished cleanup for this meeting.");
+        } else {
+          checked(await adminDb().rpc("begin_cleanup", {
+            p_org: organization_id,
+            p_meeting: id,
+            p_full: deleteMeetingRequest,
+          }));
+        }
         await start(deleteMeeting, [id]);
         return ok({ cleanup: "pending" }, 202);
       }
@@ -553,6 +588,13 @@ async function handle(
     }
     throw new HttpError(404, "Endpoint not found.");
   } catch (error) {
+    if (error instanceof UploadValidationError)
+      return ok({ error: error.message }, 400);
+    if (error instanceof ApiBudgetError)
+      return NextResponse.json({ error: error.message }, {
+        status: error.status,
+        headers: { "Retry-After": String(error.retryAfter), "Cache-Control": "no-store" },
+      });
     if (error instanceof z.ZodError)
       return ok(
         {

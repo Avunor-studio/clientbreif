@@ -123,6 +123,15 @@ Implementation checks completed:
 - Production build and TypeScript checks passed during implementation; see `VERIFICATION.md` for the final result.
 - Browser checks covered the desktop/mobile landing page, real Clerk sign-in, the authenticated workspace, client/project creation, private recording upload, real transcription, and saved transcript/speaker corrections. Direct Google generation and draft persistence passed a real backend check on the synthetic meeting. Output review and public approval still need a complete browser check.
 
+## Request limits
+
+ClientBrief allows 120 application API requests per signed-in account per minute across all agencies.
+Starting transcription, brief generation, intake preparation or a scope check also consumes one of 10 processing requests per hour.
+Signed-out review and intake requests share 30 requests per minute per Vercel client IP. Local and other hosts use one shared visitor allowance.
+Client and project inserts and updates also share 60 successful row writes per account per minute, including direct Supabase Data API writes.
+Private database counters store a digest of the identity. Only the backend can consume application quotas.
+A limited application request returns HTTP 429 with a Retry-After header. Direct database reads and resumable storage transfers use Supabase authorization separately.
+
 ## Vercel deployment
 
 1. Push the repository to your chosen Git host and import it into Vercel. Set the project **Root Directory** to `clientbrief` and Framework to Next.js. Use `npm ci` and `npm run build`.
@@ -149,3 +158,9 @@ Opt-in synthetic live test (uses configured Google and Supabase services):
 $env:CLIENTBRIEF_LIVE_PROJECTS = "1"
 npx vitest run tests/live-project-features.test.ts
 ```
+
+## Next to build
+
+1. **Client review notifications.** When a client approves a brief or requests changes, save the response and use a Supabase Edge Function to email the agency's designated project contact. Include the decision and a link to the signed-in meeting workspace. Keep the email provider key in Supabase function secrets and use the saved response ID to prevent duplicate emails on retry.
+2. **Pending approval digest.** Use Supabase Cron to send agency admins a weekday summary of briefs still awaiting review.
+3. **Slack notifications.** Let each agency connect a channel to receive approval and change-request updates.

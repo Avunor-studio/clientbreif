@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 export const publicPaths = ["/", "/how-it-works", "/for-agencies"] as const;
+const workspaceImage = "/images/clientbrief-meeting-workspace.jpg";
 export const privatePaths = [
   "/app",
   "/api",
@@ -55,11 +56,13 @@ export function publicMetadata(
   title: string,
   description: string,
   path: string,
+  keywords: readonly string[] = [],
 ): Metadata {
   const { origin, indexable } = getSiteConfig();
   return {
     title: { absolute: title },
     description,
+    ...(keywords.length ? { keywords: [...keywords] } : {}),
     ...(origin
       ? { alternates: { canonical: new URL(path, origin).href } }
       : {}),
@@ -116,6 +119,26 @@ export function publicPageSchema(
             }
           : {}),
       },
+      ...(path === "/"
+        ? [
+            {
+              "@type": "WebApplication",
+              name: "ClientBrief",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web",
+              description,
+              screenshot: origin
+                ? new URL(workspaceImage, origin).href
+                : workspaceImage,
+              featureList: [
+                "English meeting transcription with speakers and timestamps",
+                "Editable project briefs, decisions, action items, and follow-up drafts",
+                "Version-specific client approvals and change requests",
+              ],
+              ...(origin ? { "@id": `${origin}/#app`, url: origin } : {}),
+            },
+          ]
+        : []),
     ],
   };
 }

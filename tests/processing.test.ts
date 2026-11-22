@@ -37,6 +37,7 @@ function queued(...values: unknown[]) {
       "select",
       "eq",
       "is",
+      "not",
       "update",
       "delete",
       "in",

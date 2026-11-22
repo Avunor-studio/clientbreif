@@ -1,8 +1,9 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  AudioLines,
   Check,
   Copy,
   Download,
@@ -47,7 +48,7 @@ export function MeetingEditor({ id }: { id: string }) {
   const [deleteKind, setDeleteKind] = useState<"recording" | "meeting" | null>(
     null,
   );
-  const media = useRef<HTMLVideoElement>(null);
+  const media = useRef<HTMLMediaElement>(null);
   const signedSource = useRef<{ url: string; at: number } | null>(null);
   const playbackPosition = useRef(0);
   const load = useCallback(
@@ -210,17 +211,39 @@ export function MeetingEditor({ id }: { id: string }) {
       </div>
     );
   const m = data.meeting;
+  const Player = m.mime_type.startsWith("audio/") ? "audio" : "video";
   const processing = ["transcribing", "generating"].includes(m.status);
   const selected = data.versions.find((v) => v.id === versionId);
   const selectedLinks = data.links.filter((l) => l.version_id === versionId);
   const stale =
     selected && selected.transcript_revision !== m.transcript_revision;
+  const intakeSelector = data.intakes?.length > 0 && (
+    <label className="label">
+      Intake for the next draft
+      <select
+        value={intakeId}
+        disabled={processing || busy}
+        onChange={(e) => setIntakeId(e.target.value)}
+      >
+        <option value="">Use the transcript only</option>
+        {data.intakes.map((intake) => (
+          <option key={intake.id} value={intake.id}>
+            {intake.name} · {new Date(intake.created_at).toLocaleString()}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
   return (
     <div className="stack">
-      <Link href="/app/meetings" className="row muted small">
-        <ArrowLeft size={14} /> All meetings
-      </Link>
-      <Link className="small text-link" href={`/app/projects/${m.project_id}`}>Project intake & scope changes ↗</Link>
+      <div className="row between meeting-navigation">
+        <Link href="/app/meetings" className="row muted small">
+          <ArrowLeft size={14} /> All meetings
+        </Link>
+        <Link className="small text-link" href={`/app/projects/${m.project_id}`}>
+          Project intake &amp; scope changes ↗
+        </Link>
+      </div>
       <div className="row between">
         <div>
           <h1>{m.title}</h1>
@@ -271,7 +294,7 @@ export function MeetingEditor({ id }: { id: string }) {
       <div className="meeting-grid">
         <section className="card stack">
           <div className="row between">
-            <h2>Recording & transcript</h2>
+            <h2 className="meeting-panel-heading"><AudioLines size={17} aria-hidden="true" /> Recording &amp; transcript</h2>
             {segments.length > 0 && (
               <a
                 className="btn btn-ghost btn-sm"
@@ -283,17 +306,17 @@ export function MeetingEditor({ id }: { id: string }) {
             )}
           </div>
           {data.recordingUrl ? (
-            <video
+            <Player
               className="player"
-              onTimeUpdate={(e) => {
+              onTimeUpdate={(e: SyntheticEvent<HTMLMediaElement>) => {
                 playbackPosition.current = e.currentTarget.currentTime;
               }}
-              onLoadedMetadata={(e) => {
+              onLoadedMetadata={(e: SyntheticEvent<HTMLMediaElement>) => {
                 const sid = new URLSearchParams(window.location.search).get("segment");
                 const target = segments.find((s) => s.id === sid);
                 e.currentTarget.currentTime = playbackPosition.current || (target ? target.start_ms / 1000 : 0);
               }}
-              ref={media}
+              ref={(node: HTMLMediaElement | null) => { media.current = node; }}
               controls
               preload="metadata"
               src={data.recordingUrl}
@@ -441,7 +464,7 @@ export function MeetingEditor({ id }: { id: string }) {
         </section>
         <section className="card">
           <div className="row between">
-            <h2>Meeting outputs</h2>
+            <h2 className="meeting-panel-heading"><FileCheck2 size={17} aria-hidden="true" /> Meeting outputs</h2>
             <Button
               size="sm"
               disabled={
@@ -462,7 +485,40 @@ export function MeetingEditor({ id }: { id: string }) {
               {content ? "Generate new draft" : "Generate outputs"}
             </Button>
           </div>
-          {data.intakes?.length > 0 && <label className="label intake-context">Intake context for the next draft<select value={intakeId} disabled={processing || busy} onChange={(e) => setIntakeId(e.target.value)}><option value="">Use the transcript only</option>{data.intakes.map((intake) => <option key={intake.id} value={intake.id}>{intake.name} · {new Date(intake.created_at).toLocaleString()}</option>)}</select><span className="small muted">Intake answers will have separate source labels. Conflicts with the meeting remain open questions.</span></label>}
+          <div className="output-toolbar">
+            {content && (
+              <label className="label">
+                Saved version
+                <select
+                  value={versionId}
+                  onChange={(e) => {
+                    if (dirty && !window.confirm("Discard unsaved output changes?"))
+                      return;
+                    const version = data.versions.find((item) => item.id === e.target.value);
+                    if (version) {
+                      setVersionId(version.id);
+                      setContent(version.content);
+                      setDirty(false);
+                      setShareUrl("");
+                    }
+                  }}
+                >
+                  {data.versions.map((version, index) => (
+                    <option key={version.id} value={version.id}>
+                      {index === 0 ? "Latest · " : ""}
+                      {new Date(version.created_at).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {intakeSelector}
+          </div>
+          {intakeId && (
+            <p className="small muted intake-source-note">
+              Intake answers have separate citations. Conflicts remain open questions.
+            </p>
+          )}
           {!content ? (
             <div className="empty">
               <FileCheck2 size={32} />
@@ -474,36 +530,6 @@ export function MeetingEditor({ id }: { id: string }) {
             </div>
           ) : (
             <>
-              <label className="label" style={{ margin: "18px 0" }}>
-                Saved version
-                <select
-                  value={versionId}
-                  onChange={(e) => {
-                    if (
-                      dirty &&
-                      !window.confirm("Discard unsaved output changes?")
-                    )
-                      return;
-                    const v = data.versions.find(
-                      (v) => v.id === e.target.value,
-                    );
-                    if (v) {
-                      setVersionId(v.id);
-                      setContent(v.content);
-                      setDirty(false);
-                      setShareUrl("");
-                    }
-                  }}
-                >
-                  {data.versions.map((v, i) => (
-                    <option key={v.id} value={v.id}>
-                      {i === 0 ? "Latest · " : ""}
-                      {new Date(v.created_at).toLocaleString()} ·{" "}
-                      {v.id.slice(0, 6)}
-                    </option>
-                  ))}
-                </select>
-              </label>
               {stale && (
                 <p className="notice" style={{ marginBottom: 12 }}>
                   This version uses an earlier transcript. Generate a new draft

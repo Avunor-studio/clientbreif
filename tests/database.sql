@@ -43,6 +43,31 @@ begin
  perform public.begin_cleanup('org_test_a','30000000-0000-4000-8000-000000000003',false);
  if public.commit_transcript((r3->>'id')::uuid,'[]',60) then raise exception 'Deleted recording generated transcript';end if;
 end $$;
+-- Build storage metadata only. No recording bytes are uploaded.
+update public.meetings set recording_path=organization_id||'/'||id||'/test.wav'
+ where organization_id in ('org_test_a','org_test_b');
+insert into storage.objects(bucket_id,name)
+ select 'recordings',recording_path from public.meetings where organization_id in ('org_test_a','org_test_b');
+
+do $$ declare t regclass; f regprocedure; begin
+ for t in select c.oid::regclass from pg_class c join pg_namespace n on n.oid=c.relnamespace
+   where n.nspname='public' and c.relkind in ('r','p') loop
+   if not (select relrowsecurity from pg_class where oid=t) then raise exception 'Missing RLS on %',t; end if;
+   if has_table_privilege('authenticated',t,'TRUNCATE,TRIGGER,REFERENCES,DELETE')
+      or has_any_column_privilege('anon',t,'SELECT,UPDATE,INSERT,REFERENCES')
+      or has_table_privilege('anon',t,'TRUNCATE,TRIGGER,DELETE') then raise exception 'Unexpected grant on %',t; end if;
+ end loop;
+ foreach t in array array['public.review_links'::regclass,'public.intake_links'::regclass] loop
+   if has_column_privilege('authenticated',t,'token_hash','SELECT')
+      or not has_column_privilege('authenticated',t,'id','SELECT') then raise exception 'Link field permissions on %',t; end if;
+ end loop;
+ for f in select p.oid::regprocedure from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+   where n.nspname='public' and not exists (select 1 from pg_depend d where d.classid='pg_proc'::regclass and d.objid=p.oid and d.deptype='e') loop
+   if has_function_privilege('authenticated',f,'EXECUTE') or has_function_privilege('anon',f,'EXECUTE')
+     or not has_function_privilege('service_role',f,'EXECUTE') then raise exception 'Server RPC permissions on %',f; end if;
+ end loop;
+ if exists(select 1 from storage.buckets where id='recordings' and public) then raise exception 'Public recordings bucket';end if;
+end $$;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"user_test_a","role":"authenticated","o":{"id":"org_test_a","rol":"member"}}',true);
 do $$ begin
@@ -51,6 +76,12 @@ do $$ begin
  if exists(select 1 from public.meetings where organization_id='org_test_b') then raise exception 'Meeting RLS failure';end if;
  if exists(select 1 from public.output_versions where organization_id='org_test_b') then raise exception 'Output RLS failure';end if;
  if exists(select 1 from storage.objects where bucket_id='recordings' and (storage.foldername(name))[1]='org_test_b') then raise exception 'Storage RLS failure';end if;
+ if exists(select 1 from storage.objects where bucket_id='recordings' and (storage.foldername(name))[1]='org_test_a') then raise exception 'Completed or deleted upload accessible directly'; end if;
+ if exists(select 1 from public.meetings where deleted_at is not null) or exists(
+   select 1 from public.processing_runs where meeting_id='30000000-0000-4000-8000-000000000002'
+ ) then raise exception 'Deleted meeting or run remains visible';end if;
+ if (select count(id) from public.review_links)<>1 or (select count(*) from public.review_responses)<>1
+ then raise exception 'Live review history unavailable';end if;
  if has_function_privilege('authenticated','public.claim_run(text,uuid,text)','EXECUTE') then raise exception 'Privileged RPC exposed';end if;
  if has_function_privilege('authenticated','public.submit_review(text,text,text,text,text)','EXECUTE') then raise exception 'Review RPC exposed';end if;
  if has_table_privilege('authenticated','public.meetings','UPDATE') then raise exception 'Privileged meeting updates exposed';end if;
@@ -63,6 +94,33 @@ select set_config('request.jwt.claims','{"sub":"user_test_b","role":"authenticat
 do $$ begin
  if (select count(*) from public.clients)<>1 then raise exception 'Org switch RLS failure';end if;
  if (select count(*) from public.meetings)<>1 then raise exception 'Org B meeting isolation failed';end if;
+ if (select count(*) from storage.objects where bucket_id='recordings')<>1 then raise exception 'Upload recovery isolation failed';end if;
+ if has_column_privilege('authenticated','public.projects','organization_id','UPDATE')
+   or has_column_privilege('authenticated','public.clients','id','INSERT') then raise exception 'System fields are writable';end if;
+ insert into public.clients(organization_id,name) values('org_test_b','Second client');
+ update public.projects set name='Revised project' where organization_id='org_test_b';
+ if not found then raise exception 'Authorized project edit failed';end if;
+end $$;
+reset role;
+-- Remove the meeting that owns the approved version from the active workspace.
+insert into public.tasks(id,version_id,organization_id,description,segment_ids)
+ select gen_random_uuid(), version_id, organization_id, 'Test task','[]' from public.review_links where organization_id='org_test_a';
+update public.meetings set deleted_at=now() where id='30000000-0000-4000-8000-000000000001';
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"user_test_a","o":{"id":"org_test_a","rol":"admin"}}',true);
+do $$ begin
+ if exists(select 1 from public.output_versions) or exists(select 1 from public.transcript_segments)
+   or exists(select 1 from public.tasks) or exists(select id from public.review_links) or exists(select 1 from public.review_responses)
+   then raise exception 'Deleted meeting content is visible'; end if;
+end $$;
+do $$ declare claims jsonb; begin
+ for claims in select value from jsonb_array_elements('[
+   {},{"sub":"user_test_a"},{"o":{"id":"org_test_a","rol":"member"}},
+   {"sub":"user_test_a","o":{"id":"org_test_a"}},{"sub":"user_test_a","o":{"id":"org_test_a","rol":"guest"}}
+ ]') loop
+   perform set_config('request.jwt.claims',claims::text,true);
+   if private.org_id() is not null or exists(select 1 from public.clients) then raise exception 'Incomplete or unsupported session allowed'; end if;
+ end loop;
 end $$;
 reset role;
 rollback;

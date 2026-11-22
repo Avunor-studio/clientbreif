@@ -69,6 +69,7 @@ export type Meeting = {
   status: string;
   error: string | null;
   recording_path: string | null;
+  mime_type: string;
   recording_deleted: boolean;
   cleanup_status: string;
   transcript_revision: number;
@@ -112,6 +113,8 @@ export const mediaTypes: Record<string, string[]> = {
   mp4: ["video/mp4"],
   webm: ["video/webm", "audio/webm"],
 };
+export class UploadValidationError extends Error {}
+
 export function validateUpload(
   name: string,
   size: number,
@@ -120,11 +123,11 @@ export function validateUpload(
 ) {
   const ext = name.split(".").pop()?.toLowerCase() ?? "";
   if (!mediaTypes[ext]?.includes(mime))
-    throw new Error("Choose an MP3, WAV, M4A, MP4, or WebM recording.");
+    throw new UploadValidationError("Choose an MP3, WAV, M4A, MP4, or WebM recording.");
   if (size <= 0 || size > MAX_BYTES)
-    throw new Error("Recordings must be between 1 byte and 250 MB.");
+    throw new UploadValidationError("Recordings must be between 1 byte and 250 MB.");
   if (!Number.isFinite(duration) || duration <= 0 || duration > MAX_SECONDS)
-    throw new Error("Recordings must be no longer than 60 minutes.");
+    throw new UploadValidationError("Recordings must be no longer than 60 minutes.");
   return ext;
 }
 export function csvCell(v: unknown) {

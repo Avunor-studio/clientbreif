@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 const roots = [
   "src",
+  "public",
   "package.json",
   "package-lock.json",
   "next.config.ts",

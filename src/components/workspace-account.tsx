@@ -6,6 +6,12 @@ export default function WorkspaceAccount() {
     <div className="row">
       <OrganizationSwitcher
         hidePersonal
+        appearance={{
+          elements: {
+            organizationSwitcherTrigger: "workspace-org-switcher",
+            organizationPreviewMainIdentifier: "workspace-org-name",
+          },
+        }}
         afterSelectOrganizationUrl="/app"
         afterCreateOrganizationUrl="/app"
       />
