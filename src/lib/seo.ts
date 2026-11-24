@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-export const publicPaths = ["/", "/how-it-works", "/for-agencies"] as const;
+export const publicPaths = ["/", "/how-it-works", "/for-agencies", "/pricing"] as const;
 const workspaceImage = "/images/clientbrief-meeting-workspace.jpg";
 export const privatePaths = [
   "/app",
