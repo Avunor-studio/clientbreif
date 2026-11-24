@@ -1,5 +1,32 @@
 @import "tailwindcss";
 @import "@clerk/ui/themes/shadcn.css";
+.workspace-plan-rate {
+  color: var(--muted-foreground);
+  margin: 10px 0 18px;
+}
+.workspace-plan-rate strong {
+  color: var(--foreground);
+  font-size: clamp(32px, 6vw, 44px);
+  letter-spacing: -0.05em;
+}
+.workspace-plan-features {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0 0 20px;
+  list-style: none;
+}
+.workspace-plan-features li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.workspace-plan-features svg {
+  flex-shrink: 0;
+}
+.workspace-plan-actions > p {
+  margin: 0 0 10px;
+}
 :root {
   --background: #f7f7f8;
   --foreground: #18181b;
