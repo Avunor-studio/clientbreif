@@ -66,6 +66,15 @@ export type ReviewLink = {
   review_responses: Response[];
 };
 export type Bootstrap = {
+  allowance: {
+    plan: "trial" | "pilot";
+    endsAt: string;
+    limitSeconds: number;
+    usedSeconds: number;
+    reservedSeconds: number;
+    remainingSeconds: number;
+    requested: boolean;
+  };
   clients: Client[];
   projects: Project[];
   meetings: Meeting[];
@@ -867,6 +876,10 @@ function Settings({
   refresh: () => Promise<void>;
 }) {
   const [error, setError] = useState("");
+  const [requesting, setRequesting] = useState(false);
+  const allowance = data.allowance;
+  const end = new Date(allowance.endsAt);
+  const expired = end.getTime() <= Date.now();
   return (
     <div className="stack">
       <div className="page-title">
@@ -874,7 +887,24 @@ function Settings({
         <p className="muted">Your agency, your people, your data.</p>
       </div>
       <div className="card">
-        <h2>Pilot usage</h2>
+        <h2>{allowance.plan === "trial" ? "Workspace trial" : "Pilot month"}</h2>
+        <p>{allowance.limitSeconds / 60} shared recording minutes · {expired ? "Ended" : "Ends"} {end.toLocaleDateString()}</p>
+        <progress aria-label="Recording allowance used or reserved"
+          max={allowance.limitSeconds} value={Math.min(allowance.limitSeconds, allowance.usedSeconds + allowance.reservedSeconds)} />
+        <p className="small">{allowance.usedSeconds} seconds used · {allowance.reservedSeconds} seconds processing · {expired ? 0 : allowance.remainingSeconds} seconds available</p>
+        <p className="muted">A pilot month includes 600 recording minutes. Your briefs, exports, and client reviews stay available when recording time runs out.</p>
+        {allowance.requested ? <p role="status">Pilot request received. A ClientBrief operator will review it.</p>
+          : data.isAdmin ? <Button disabled={requesting} onClick={async () => {
+            setRequesting(true);
+            setError("");
+            try {
+              await api("billing/request-pilot", "POST");
+              await refresh();
+            } catch (e) { setError((e as Error).message); }
+            finally { setRequesting(false); }
+          }}>{requesting ? "Requesting…" : allowance.plan === "trial" ? "Request pilot access" : "Request a new pilot month"}</Button>
+          : <p className="small">A workspace admin can request a pilot month.</p>}
+        {error && <p className="notice error" role="alert">{error}</p>}
         <p className="muted" style={{ marginTop: 10 }}>
           {data.meetings.length} meetings ·{" "}
           {Math.ceil(
@@ -894,7 +924,6 @@ function Settings({
       {data.cleanup.length > 0 && (
         <section className="card stack">
           <h2>Recording cleanup</h2>
-          {error && <p className="notice error">{error}</p>}
           {data.cleanup.map((m) => (
             <div className="row between" key={m.id}>
               <div>

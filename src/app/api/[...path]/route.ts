@@ -159,6 +159,11 @@ async function handle(
     const ctx = await context(false, { processing: startsProcessing(method, path) });
     const db = ctx.db;
     const organization_id = ctx.orgId;
+    if (method === "POST" && path.join("/") === "billing/request-pilot") {
+      if (!ctx.isAdmin) throw new HttpError(403, "Ask a workspace admin to request pilot access.");
+      checked(await adminDb().rpc("request_pilot_access", { p_org: organization_id }));
+      return ok({ requested: true });
+    }
     if (path[0] === "bootstrap" && method === "GET") {
       const results = await Promise.all([
         db
@@ -195,10 +200,12 @@ async function handle(
               .in("cleanup_status", ["pending", "failed"])
           : { data: [], error: null },
         db.from("project_runs").select("id,project_id,kind,status,created_at,finished_at,error"),
+        adminDb().rpc("recording_allowance", { p_org: organization_id }),
       ]);
-      const [clients, projects, meetings, links, versions, runs, cleanup, projectRuns] =
+      const [clients, projects, meetings, links, versions, runs, cleanup, projectRuns, allowance] =
         results.map(checked);
       return ok({
+        allowance,
         clients,
         projects,
         meetings,
@@ -258,6 +265,9 @@ async function handle(
             .maybeSingle(),
         );
         if (!project) throw new HttpError(404, "Project not found.");
+        checked(await adminDb().rpc("recording_allowance", {
+          p_org: organization_id, p_seconds: Math.ceil(b.duration),
+        }));
         const id = randomUUID(),
           recording_path = `${organization_id}/${id}/recording.${ext}`;
         const row = checked(

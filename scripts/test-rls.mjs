@@ -12,6 +12,7 @@ try {
   );
   await db.query(readFileSync(new URL("../tests/project-database.sql", import.meta.url), "utf8"));
   await db.query(readFileSync(new URL("../tests/rate-limits.sql", import.meta.url), "utf8"));
+  await db.query(readFileSync(new URL("../tests/recording-allowance.sql", import.meta.url), "utf8"));
   console.log(
     "Database isolation, concurrency, reviews, and deletion tests passed; fixtures rolled back.",
   );

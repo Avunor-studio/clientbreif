@@ -83,6 +83,7 @@ export function checked<T>(result: {
   error: { message: string; code?: string } | null;
 }): NonNullable<T> {
   if (result.error) {
+    if (result.error.code === "PT402") throw new HttpError(402, result.error.message);
     if (result.error.code === "PT429") throw new ApiBudgetError(429, 60);
     if (/No suitable key|wrong key type/i.test(result.error.message)) {
       throw new HttpError(

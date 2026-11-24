@@ -11,6 +11,7 @@ insert into public.meetings(id,organization_id,project_id,title,mime_type,bytes)
 ('30000000-0000-4000-8000-000000000002','org_test_a','20000000-0000-4000-8000-000000000001','A meeting 2','audio/mpeg',100),
 ('30000000-0000-4000-8000-000000000003','org_test_a','20000000-0000-4000-8000-000000000001','A meeting 3','audio/mpeg',100),
 ('30000000-0000-4000-8000-000000000004','org_test_b','20000000-0000-4000-8000-000000000002','B meeting','audio/mpeg',100);
+update public.meetings set duration_seconds=60 where organization_id in ('org_test_a','org_test_b');
 do $$
 declare r jsonb; duplicate jsonb; r2 jsonb; r3 jsonb; v uuid; l uuid; newer uuid; response jsonb; content jsonb;
 begin

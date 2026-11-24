@@ -42,6 +42,24 @@ beforeEach(() => {
   mocks.rpc.mockResolvedValue({ data: null, error: null });
 });
 
+describe("manual pilot", () => {
+  const path = ["billing", "request-pilot"];
+  const requestPilot = () => POST(new NextRequest(url + path.join("/"), { method: "POST" }), {
+    params: Promise.resolve({ path }),
+  });
+
+  it("records the request for the authenticated admin's workspace", async () => {
+    expect((await requestPilot()).status).toBe(200);
+    expect(mocks.rpc).toHaveBeenCalledWith("request_pilot_access", { p_org: orgId });
+  });
+
+  it("denies requests from a member before writing anything", async () => {
+    mocks.context.mockResolvedValue({ db: {}, orgId, isAdmin: false });
+    expect((await requestPilot()).status).toBe(403);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+});
+
 describe("JSON requests", () => {
   it.each(["{", "null", "[]"])("returns 400 for an invalid JSON object body %s", async (body) => {
     const response = await POST(new NextRequest(url + "clients", { method: "POST", body }), {
