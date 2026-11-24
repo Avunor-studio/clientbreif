@@ -39,6 +39,7 @@ export function MarketingLayout({
             <Link href="/#outputs">The product</Link>
             <Link href="/how-it-works">How it works</Link>
             <Link href="/for-agencies">For agencies</Link>
+            <Link href="/pricing">Pricing</Link>
             <Link href="/how-it-works#recordings">Recording &amp; data</Link>
             <Link href="/#faq">FAQ</Link>
             <Link href="/sign-in">Sign in</Link>

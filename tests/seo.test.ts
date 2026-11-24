@@ -47,7 +47,7 @@ describe("public-site indexing boundary", () => {
       }),
     ).toThrow("HTTPS production origin");
   });
-  it("only publishes the three marketing URLs in a production sitemap", () => {
+  it("only publishes public marketing URLs in a production sitemap", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("SITE_URL", "https://clientbrief.example/");
