@@ -142,7 +142,7 @@ A limited application request returns HTTP 429 with a Retry-After header. Direct
 6. Apply migrations before releasing against a new database. Run the full real-recording acceptance flow on a preview before allowing pilot client recordings.
 7. If using `vercel env pull`, back up local configuration securely first: that command replaces its destination file. Do not commit a credential backup.
 
-Local review links point to localhost and work only on the same computer. Remote client review needs a deployed origin. This release does not include billing, automated email sending, live bots, multilingual support, or task-tool integrations.
+Local review links point to localhost and work only on the same computer. Remote client review needs a deployed origin. Workspace subscriptions use RevenueCat Web Billing. See the [billing setup guide](docs/revenuecat.md).
 
 ## Client intake and scope tracking
 

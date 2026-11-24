@@ -1,3 +1,4 @@
+import { billingDestination, workspaceBilling, requireRecordingAccess } from "@/lib/revenuecat";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
@@ -159,10 +160,13 @@ async function handle(
     const ctx = await context(false, { processing: startsProcessing(method, path) });
     const db = ctx.db;
     const organization_id = ctx.orgId;
-    if (method === "POST" && path.join("/") === "billing/request-pilot") {
-      if (!ctx.isAdmin) throw new HttpError(403, "Ask a workspace admin to request pilot access.");
-      checked(await adminDb().rpc("request_pilot_access", { p_org: organization_id }));
-      return ok({ requested: true });
+    if (method === "POST" && path.join("/") === "billing/checkout") {
+      if (!ctx.isAdmin) throw new HttpError(403, "A workspace admin must manage billing.");
+      return ok({ url: await billingDestination(organization_id) });
+    }
+    if (method === "GET" && path.join("/") === "billing/status") {
+      const { status } = await workspaceBilling(organization_id);
+      return ok({ status });
     }
     if (path[0] === "bootstrap" && method === "GET") {
       const results = await Promise.all([
@@ -200,12 +204,10 @@ async function handle(
               .in("cleanup_status", ["pending", "failed"])
           : { data: [], error: null },
         db.from("project_runs").select("id,project_id,kind,status,created_at,finished_at,error"),
-        adminDb().rpc("recording_allowance", { p_org: organization_id }),
       ]);
-      const [clients, projects, meetings, links, versions, runs, cleanup, projectRuns, allowance] =
+      const [clients, projects, meetings, links, versions, runs, cleanup, projectRuns] =
         results.map(checked);
       return ok({
-        allowance,
         clients,
         projects,
         meetings,
@@ -265,9 +267,7 @@ async function handle(
             .maybeSingle(),
         );
         if (!project) throw new HttpError(404, "Project not found.");
-        checked(await adminDb().rpc("recording_allowance", {
-          p_org: organization_id, p_seconds: Math.ceil(b.duration),
-        }));
+        await requireRecordingAccess(organization_id);
         const id = randomUUID(),
           recording_path = `${organization_id}/${id}/recording.${ext}`;
         const row = checked(
@@ -350,6 +350,7 @@ async function handle(
           kind === "generate" ? generationApiKeyName() : "ASSEMBLYAI_API_KEY",
         );
         if (kind === "transcribe") {
+          await requireRecordingAccess(organization_id);
           if (m.recording_deleted)
             throw new HttpError(409, "Recording has been deleted.");
           const parts = m.recording_path.split("/");

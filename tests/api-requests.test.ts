@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 const mocks = vi.hoisted(() => ({
   context: vi.fn(),
+  destination: vi.fn(),
   scopedMeeting: vi.fn(),
   update: vi.fn(),
   rpc: vi.fn(),
@@ -13,6 +14,7 @@ vi.mock("../src/lib/server", async (importOriginal) => ({
   context: mocks.context,
   scopedMeeting: mocks.scopedMeeting,
 }));
+vi.mock("../src/lib/revenuecat", () => ({ billingDestination: mocks.destination, requireRecordingAccess: vi.fn() }));
 vi.mock("../src/lib/admin-db", () => ({
   adminDb: () => ({ from: () => ({ update: mocks.update }), rpc: mocks.rpc }),
 }));
@@ -42,21 +44,21 @@ beforeEach(() => {
   mocks.rpc.mockResolvedValue({ data: null, error: null });
 });
 
-describe("manual pilot", () => {
-  const path = ["billing", "request-pilot"];
-  const requestPilot = () => POST(new NextRequest(url + path.join("/"), { method: "POST" }), {
+describe("RevenueCat checkout", () => {
+  const path = ["billing", "checkout"];
+  const checkout = () => POST(new NextRequest(url + path.join("/"), { method: "POST" }), {
     params: Promise.resolve({ path }),
   });
 
-  it("records the request for the authenticated admin's workspace", async () => {
-    expect((await requestPilot()).status).toBe(200);
-    expect(mocks.rpc).toHaveBeenCalledWith("request_pilot_access", { p_org: orgId });
+  it("opens checkout for the authenticated workspace", async () => {
+    expect((await checkout()).status).toBe(200);
+    expect(mocks.destination).toHaveBeenCalledWith(orgId);
   });
 
   it("denies requests from a member before writing anything", async () => {
     mocks.context.mockResolvedValue({ db: {}, orgId, isAdmin: false });
-    expect((await requestPilot()).status).toBe(403);
-    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect((await checkout()).status).toBe(403);
+    expect(mocks.destination).not.toHaveBeenCalled();
   });
 });
 

@@ -137,12 +137,7 @@ export function UploadMeeting({ data }: { data: Bootstrap }) {
           Choose a client project and bring its audio or video recording.
         </p>
       </div>
-      <div className="notice">
-        {data.allowance.remainingSeconds > 0
-          ? `Available recording time: ${Math.floor(data.allowance.remainingSeconds / 60)} min ${data.allowance.remainingSeconds % 60} sec.`
-          : "Your workspace has no recording time available."}{" "}
-        <Link href="/app/settings">View workspace plan</Link>
-      </div>
+      <p className="small muted">Recording transcription requires an active workspace subscription. <Link href="/app/settings">View billing</Link></p>
       <form className="card stack" onSubmit={(e) => void submit(e)}>
         <div className="form-grid">
           <label className="label">
@@ -239,7 +234,7 @@ export function UploadMeeting({ data }: { data: Bootstrap }) {
           </div>
         )}
         <div className="row">
-          <Button disabled={busy || !file || (!meeting && data.allowance.remainingSeconds === 0)}>
+          <Button disabled={busy || !file}>
             <Upload size={16} />
             {busy
               ? "Working…"
