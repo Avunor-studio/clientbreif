@@ -577,21 +577,6 @@
   margin-top: 17px;
   text-align: left;
 }
-.pricing-card .pricing-rate {
-  color: var(--muted-foreground);
-  margin: 10px 0 18px;
-}
-.pricing-rate strong {
-  color: var(--foreground);
-  font-size: clamp(32px, 6vw, 44px);
-  letter-spacing: -0.05em;
-}
-.pricing-card .plain-checks {
-  margin-bottom: 24px;
-}
-.pricing-card .btn {
-  margin-top: 10px;
-}
 .process-layout {
   display: grid;
   grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);

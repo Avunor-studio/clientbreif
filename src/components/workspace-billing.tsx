@@ -30,7 +30,6 @@ export function WorkspaceBilling({ isAdmin }: { isAdmin: boolean }) {
     }
   }
   return <section className="stack">
-    <h2>Workspace subscription</h2>
     <p role="status">{{
       loading: "Checking subscription…",
       active: "Your workspace can transcribe new recordings.",
@@ -38,7 +37,7 @@ export function WorkspaceBilling({ isAdmin }: { isAdmin: boolean }) {
       unavailable: "Billing is temporarily unavailable.",
     }[status]}</p>
     {isAdmin && (status === "active" || status === "inactive") &&
-      <Button onClick={openBilling} disabled={pending}>{pending ? "Opening billing…" : status === "active" ? "Manage subscription" : "View plans"}</Button>}
+      <Button onClick={openBilling} disabled={pending}>{pending ? "Opening billing…" : status === "active" ? "Manage subscription" : "Subscribe monthly"}</Button>}
     {!isAdmin && status === "inactive" && <p>A workspace admin can subscribe in Settings.</p>}
     {status === "unavailable" && <Button variant="outline" onClick={() => { setStatus("loading"); setAttempt(n => n + 1); }}>Retry billing check</Button>}
     {error && <p role="alert" className="notice error">{error}</p>}

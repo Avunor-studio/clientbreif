@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { WorkspaceBilling } from "./workspace-billing";
 import { Brand } from "./brand";
+import { WorkspacePlan } from "./workspace-plan";
 import { Button } from "./ui/button";
 import { api } from "@/lib/browser-api";
 import type { Meeting } from "@/lib/model";
@@ -874,9 +875,11 @@ function Settings({
         <h1>Workspace settings</h1>
         <p className="muted">Your agency, your people, your data.</p>
       </div>
-      <div className="card">
+      <WorkspacePlan className="card">
         <WorkspaceBilling key={data.orgId} isAdmin={data.isAdmin} />
-        {error && <p className="notice error" role="alert">{error}</p>}
+      </WorkspacePlan>
+      <div className="card">
+        <h2>Recording usage</h2>
         <p className="muted" style={{ marginTop: 10 }}>
           {data.meetings.length} meetings ·{" "}
           {Math.ceil(
@@ -896,6 +899,7 @@ function Settings({
       {data.cleanup.length > 0 && (
         <section className="card stack">
           <h2>Recording cleanup</h2>
+          {error && <p className="notice error" role="alert">{error}</p>}
           {data.cleanup.map((m) => (
             <div className="row between" key={m.id}>
               <div>
