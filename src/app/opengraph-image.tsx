@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { BrandMark } from "@/components/brand";
+
 export const alt = "ClientBrief — Turn client meetings into project briefs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -15,8 +17,9 @@ export default function OpenGraphImage() {
         flexDirection: "column",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", fontSize: 30 }}>
-        ClientBrief
+      <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 30 }}>
+        <BrandMark size={36} />
+        <span>ClientBrief</span>
       </div>
       <div
         style={{
