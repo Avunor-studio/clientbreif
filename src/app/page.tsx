@@ -147,13 +147,6 @@ export default function Home() {
         </div>
         <TranscriptWalkthrough />
         <OutputDemo />
-        <noscript>
-          <style>{`
-            .homepage .demo-tablist { display: none }
-            .homepage .demo-content [hidden] { display: block }
-            .homepage .demo-content [role=tabpanel] + [role=tabpanel] { margin-top: 24px }
-          `}</style>
-        </noscript>
       </section>
 
       <section className="home-workflow" id="workflow">

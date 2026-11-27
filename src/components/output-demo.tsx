@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Check, FileText, Link2, ListChecks, Mail } from "lucide-react";
 import { BriefPreview } from "./brief-preview";
 
@@ -11,11 +11,16 @@ const tabs = [
   { label: "Follow-up email", icon: Mail },
 ] as const;
 
+const subscribe = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export function OutputDemo() {
   const [selected, setSelected] = useState(0);
+  const interactive = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
   return (
     <div className="output-demo">
-      <div
+      {interactive && <div
         className="demo-tablist"
         role="tablist"
         aria-label="Example meeting outputs"
@@ -50,16 +55,17 @@ export function OutputDemo() {
             {label}
           </button>
         ))}
-      </div>
-      <div className="demo-content">
+      </div>}
+      <div className="demo-content" data-interactive={interactive || undefined}>
         {tabs.map(({ label }, index) => (
           <div
             key={label}
-            role="tabpanel"
-            tabIndex={0}
-            hidden={selected !== index}
+            className="demo-panel"
+            role={interactive ? "tabpanel" : undefined}
+            tabIndex={interactive ? 0 : undefined}
+            hidden={interactive && selected !== index}
             id={`demo-panel-${index}`}
-            aria-labelledby={`demo-tab-${index}`}
+            aria-labelledby={interactive ? `demo-tab-${index}` : undefined}
           >
             <ExampleOutput index={index} />
           </div>

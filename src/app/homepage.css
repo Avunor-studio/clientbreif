@@ -246,6 +246,10 @@
   color: var(--ink-blue);
 }
 
+.demo-content:not([data-interactive]) .demo-panel + .demo-panel {
+  margin-top: 24px;
+}
+
 .homepage .workflow-cards {
   gap: 12px;
 }
