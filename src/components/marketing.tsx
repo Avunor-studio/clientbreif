@@ -18,7 +18,7 @@ export function MarketingLayout({
   description: string;
 }) {
   return (
-    <div className="marketing">
+    <div className={path === "/" ? "marketing homepage" : "marketing"}>
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>

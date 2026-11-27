@@ -8,11 +8,14 @@ import {
   ChevronDown,
   FileCheck2,
   FilePenLine,
+  LayoutTemplate,
   Upload,
 } from "lucide-react";
 import { MarketingLayout, WorkspaceCta } from "@/components/marketing";
 import { OutputDemo } from "@/components/output-demo";
+import { TranscriptWalkthrough } from "@/components/transcript-walkthrough";
 import { publicMetadata } from "@/lib/seo";
+import "./homepage.css";
 
 const title =
   "AI Meeting Transcription & Project Briefs for Agencies | ClientBrief";
@@ -86,37 +89,36 @@ const { props: workspacePreview } = getImageProps({
   alt: "ClientBrief workspace for a sample website discovery meeting",
   width: 1200,
   height: 690,
-  sizes: "(max-width: 900px) calc(100vw - 60px), (max-width: 1296px) calc(100vw - 96px), 1200px",
+  sizes: "(max-width: 900px) calc(100vw - 86px), (max-width: 1192px) calc(100vw - 122px), 1070px",
   loading: "eager",
+  fetchPriority: "high",
 });
 
 export default function Home() {
   return (
     <MarketingLayout path="/" title={title} description={description}>
       <section className="home-hero site-width">
-        <span className="hero-kicker">
-          For agencies and client-facing teams
-        </span>
+        <p className="home-audience">For client-facing agencies</p>
         <h1>
-          Turn client meetings into <em>project briefs.</em>
+          <span>Turn client calls into</span>{" "}
+          <span>briefs your clients can approve.</span>
         </h1>
-        <p>
-          Upload a meeting recording. Get an editable brief, decisions, action
-          items, and a follow-up draft. Check the transcript and share the
-          version your client should review.
+        <p className="home-intro">
+          Upload a meeting recording. Review the transcript, edit the AI draft,
+          and share a saved brief for approval.
         </p>
         <div className="home-actions">
           <Link className="btn btn-primary" href="/app">
-            Create your workspace <ArrowUpRight size={16} />
+            Create a workspace <ArrowUpRight size={16} aria-hidden="true" />
           </Link>
           <a className="btn btn-outline" href="#outputs">
-            See an example brief <ArrowDown size={15} />
+            See an example <ArrowDown size={15} aria-hidden="true" />
           </a>
         </div>
         <figure className="workspace-preview">
           <figcaption>
             <span>
-              <span className="preview-dot" /> ClientBrief workspace
+              <LayoutTemplate size={14} aria-hidden="true" /> ClientBrief workspace
             </span>
             <span>Sample website discovery meeting</span>
           </figcaption>
@@ -132,14 +134,32 @@ export default function Home() {
         </figure>
       </section>
 
+      <section className="site-width home-section home-outputs" id="outputs">
+        <div className="section-heading home-section-heading">
+          <div>
+            <p className="eyebrow">Website discovery example</p>
+            <h2>See how a conversation becomes a brief.</h2>
+          </div>
+          <p>
+            Start with one moment from the call, then explore the drafts your
+            team can edit and save.
+          </p>
+        </div>
+        <TranscriptWalkthrough />
+        <OutputDemo />
+        <noscript>
+          <style>{`
+            .homepage .demo-tablist { display: none }
+            .homepage .demo-content [hidden] { display: block }
+            .homepage .demo-content [role=tabpanel] + [role=tabpanel] { margin-top: 24px }
+          `}</style>
+        </noscript>
+      </section>
+
       <section className="home-workflow" id="workflow">
         <div className="site-width home-section">
           <div className="home-section-heading">
-            <span className="eyebrow">The workflow</span>
-            <h2>
-              From meeting recording
-              <br className="desktop-break" /> to client approval.
-            </h2>
+            <h2>From recording to client approval.</h2>
             <p>
               Review what was said, decide what goes into the brief, and keep
               the approved version with the project.
@@ -158,60 +178,13 @@ export default function Home() {
             ))}
           </ol>
           <Link className="text-link" href="/how-it-works">
-            Explore the full workflow <ArrowUpRight size={15} />
+            Explore the full workflow <ArrowUpRight size={15} aria-hidden="true" />
           </Link>
         </div>
       </section>
 
-      <section className="site-width home-section" id="outputs">
-        <div className="section-heading home-section-heading">
-          <div>
-            <span className="eyebrow">Example outputs</span>
-            <h2>
-              Four deliverables
-              <br className="desktop-break" /> from one client call.
-            </h2>
-          </div>
-          <p>
-            Explore a website discovery project. Each draft can be checked
-            against the conversation and edited by your team.
-          </p>
-        </div>
-        <OutputDemo />
-      </section>
-
-      <div className="home-facts">
-        <dl className="site-width">
-          <div>
-            <dt>
-              Recording formats<span>Audio and video uploads</span>
-            </dt>
-            <dd>5</dd>
-          </div>
-          <div>
-            <dt>
-              Meeting length<span>Up to 250 MB per file</span>
-            </dt>
-            <dd>60 min</dd>
-          </div>
-          <div>
-            <dt>
-              Client review window<span>Links can be revoked sooner</span>
-            </dt>
-            <dd>7 days</dd>
-          </div>
-          <div>
-            <dt>
-              Approval history<span>Saved approvals stay with the brief</span>
-            </dt>
-            <dd>By version</dd>
-          </div>
-        </dl>
-      </div>
-
       <section className="site-width home-section home-faq" id="faq">
         <div className="home-section-heading">
-          <span className="eyebrow">Frequently asked questions</span>
           <h2>Before your first upload.</h2>
           <p>Recording formats, client review, exports, and data retention.</p>
         </div>
@@ -226,9 +199,14 @@ export default function Home() {
             </details>
           ))}
         </div>
-        <Link className="text-link" href="/how-it-works#recordings">
-          <Check size={15} /> Read about recordings and data
-        </Link>
+        <div className="home-faq-links">
+          <Link className="text-link" href="/how-it-works#recordings">
+            <Check size={15} aria-hidden="true" /> Read about recordings and data
+          </Link>
+          <Link className="text-link" href="/pricing">
+            See plans <ArrowUpRight size={15} aria-hidden="true" />
+          </Link>
+        </div>
       </section>
       <WorkspaceCta />
     </MarketingLayout>

@@ -126,24 +126,10 @@
   padding-block: clamp(67px, 8vw, 118px) clamp(64px, 8vw, 114px);
   text-align: center;
 }
-.hero-kicker {
-  display: inline-block;
-  padding: 5px 11px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--muted);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
 .home-hero h1 {
   max-width: 920px;
   margin: 21px auto 0;
   text-wrap: balance;
-}
-.home-hero h1 em {
-  display: block;
 }
 .home-hero > p {
   max-width: 548px;
@@ -190,12 +176,6 @@
   align-items: center;
   gap: 8px;
   color: var(--foreground);
-}
-.preview-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--foreground);
 }
 .workspace-preview img {
   display: block;
@@ -277,51 +257,6 @@
   background: var(--muted);
   color: var(--foreground);
   font-size: 11px;
-}
-.home-facts {
-  background: #171719;
-  color: #fff;
-}
-.home-facts dl {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding-block: 34px;
-}
-.home-facts dl > div {
-  display: flex;
-  flex-direction: column;
-  padding: 8px 22px;
-  border-right: 1px solid #ffffff25;
-}
-.home-facts dl > div:first-child {
-  padding-left: 0;
-}
-.home-facts dl > div:last-child {
-  border: 0;
-  padding-right: 0;
-}
-.home-facts dd {
-  order: -1;
-  margin: 0 0 7px;
-  font:
-    450 clamp(32px, 3.8vw, 49px)/1 var(--font-editorial),
-    Georgia,
-    serif;
-}
-.home-facts dt {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.home-facts dt span {
-  display: block;
-  color: #c4c4ca;
-  font-size: 12px;
-  margin-top: 5px;
-  font-weight: 400;
-  letter-spacing: normal;
-  text-transform: none;
 }
 .home-faq {
   text-align: center;
@@ -799,23 +734,6 @@
   }
   .workflow-cards h3 {
     font-size: 22px;
-  }
-  .home-facts dl {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding-block: 18px;
-  }
-  .home-facts dl > div {
-    padding: 13px 10px;
-  }
-  .home-facts dl > div:nth-child(odd) {
-    padding-left: 0;
-  }
-  .home-facts dl > div:nth-child(even) {
-    border-right: 0;
-    padding-right: 0;
-  }
-  .home-facts dl > div:nth-child(-n + 2) {
-    border-bottom: 1px solid #ffffff25;
   }
   .demo-tablist button {
     flex: 1 0 43%;
